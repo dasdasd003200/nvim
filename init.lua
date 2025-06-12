@@ -1,0 +1,5 @@
+require("config.lazy")
+require("config.lualine")
+require("config.lsp-config")
+require("config.litle-bird-init")
+require("config.colors")

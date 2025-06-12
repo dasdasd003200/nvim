@@ -1,0 +1,21 @@
+-- return {
+--   "folke/tokyonight.nvim",
+--   lazy = false,
+--   priority = 1000,
+--   opts = {
+--     style = "storm", -- Puedes usar: "storm", "moon", "night", "day"
+--     transparent = true, -- ¡esto activa el fondo transparente!
+--     styles = {
+--       sidebars = "transparent",
+--       floats = "transparent",
+--     },
+--   },
+-- }
+--
+-- -- return {
+-- --   "navarasu/onedark.nvim",
+-- --   opts = {
+-- --     style = "darker",
+-- --     transparent = true,
+-- --   },
+-- -- }
