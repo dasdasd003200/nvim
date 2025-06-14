@@ -4,14 +4,14 @@
 vim.g.lazyvim_prettier_needs_config = false
 
 --dasdasd
---transparent
+-- transparent
 -- Colores verdaderos
 -- vim.opt.termguicolors = true
--- Fondo transparente
--- vim.cmd("highlight Normal guibg=NONE ctermbg=NONE")
--- vim.cmd("highlight NormalNC guibg=NONE ctermbg=NONE")
--- vim.cmd("highlight EndOfBuffer guibg=NONE ctermbg=NONE")
-
+-- -- Fondo transparente
+-- -- vim.cmd("highlight Normal guibg=NONE ctermbg=NONE")
+-- -- vim.cmd("highlight NormalNC guibg=NONE ctermbg=NONE")
+-- -- vim.cmd("highlight EndOfBuffer guibg=NONE ctermbg=NONE")
+--
 -- vim.cmd("highlight Normal guibg=NONE ctermbg=NONE")
 -- vim.cmd("highlight NormalNC guibg=NONE ctermbg=NONE")
 -- vim.cmd("highlight EndOfBuffer guibg=NONE ctermbg=NONE")

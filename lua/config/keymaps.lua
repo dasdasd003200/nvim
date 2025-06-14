@@ -159,3 +159,11 @@ vim.keymap.set("n", "<leader>bu", open_terminal_in_file_dir, {
   silent = true,
   desc = "Open terminal in current file's directory",
 })
+
+-- local map = vim.keymap.set
+
+map("n", "<leader>rp", require("config.transparent").toggle_transparency, {
+  desc = "Alternar transparencia",
+  noremap = true,
+  silent = true,
+})
