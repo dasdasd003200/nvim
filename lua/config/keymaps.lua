@@ -141,8 +141,8 @@ map("n", "<leader>rp", require("config.transparent").toggle_transparency, {
   silent = true,
 })
 
-vim.keymap.set("n", "<leader>ri", _G.gather_file_contents_for_node, {
+vim.keymap.set("n", "<leader>ri", _G.gather_file_contents_smart, {
   noremap = true,
   silent = true,
-  desc = "Copy Copy node",
+  desc = "Smart file content gatherer (Node.js/Python)",
 })
