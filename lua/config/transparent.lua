@@ -4,11 +4,11 @@ local is_transparent = true
 
 function M.toggle_transparency()
   if is_transparent then
-    vim.cmd("highlight Normal guibg=#1a1b26")
-    vim.cmd("highlight NormalNC guibg=#1a1b26")
-    vim.cmd("highlight EndOfBuffer guibg=#1a1b26")
-    vim.cmd("highlight VertSplit guibg=#1a1b26")
-    vim.cmd("highlight SignColumn guibg=#1a1b26")
+    vim.cmd("highlight clear Normal")
+    vim.cmd("highlight clear NormalNC")
+    vim.cmd("highlight clear EndOfBuffer")
+    vim.cmd("highlight clear VertSplit")
+    vim.cmd("highlight clear SignColumn")
   else
     vim.cmd("highlight Normal guibg=NONE ctermbg=NONE")
     vim.cmd("highlight NormalNC guibg=NONE ctermbg=NONE")

@@ -97,33 +97,6 @@ map("n", "<C-Down>", "<NOP>", { noremap = true, silent = true })
 map("v", "<C-Up>", "<NOP>", { noremap = true, silent = true })
 map("v", "<C-Down>", "<NOP>", { noremap = true, silent = true })
 
--- Función para abrir o cerrar la terminal en una pestaña
-function ToggleTerminalTab()
-  -- Comprobar si ya hay una pestaña con terminal abierta
-  local terminal_tab = nil
-
-  for _, tab in ipairs(vim.api.nvim_list_tabpages()) do
-    local win = vim.api.nvim_tabpage_get_win(tab)
-    local buf = vim.api.nvim_win_get_buf(win)
-    local buf_ft = vim.api.nvim_buf_get_option(buf, "filetype")
-    if buf_ft == "terminal" then
-      terminal_tab = tab
-      break
-    end
-  end
-
-  if terminal_tab then
-    -- Si ya hay una pestaña con terminal, ciérrala
-    vim.api.nvim_command("tabclose")
-  else
-    -- Si no hay terminal abierta, abrir una nueva pestaña con terminal
-    vim.api.nvim_command("tabnew | terminal")
-  end
-end
-
--- Mapear la secuencia <leader>bt para abrir/cerrar la terminal en una pestaña
-map("n", "<leader>bt", ToggleTerminalTab, { noremap = true, silent = true })
-
 ---- Función para abrir terminal en la ubicación del archivo actual
 
 -- Función para abrir terminal en la ubicación del archivo actual
@@ -163,7 +136,13 @@ vim.keymap.set("n", "<leader>bu", open_terminal_in_file_dir, {
 -- local map = vim.keymap.set
 
 map("n", "<leader>rp", require("config.transparent").toggle_transparency, {
-  desc = "Alternar transparencia",
+  desc = "transparent",
   noremap = true,
   silent = true,
+})
+
+vim.keymap.set("n", "<leader>ri", _G.gather_file_contents_for_node, {
+  noremap = true,
+  silent = true,
+  desc = "Copy Copy node",
 })
