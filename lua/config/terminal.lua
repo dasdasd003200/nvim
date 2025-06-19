@@ -56,12 +56,33 @@ function M.toggle_terminal()
   -- Aplicar highlights súper estilizados
   M.setup_terminal_highlights()
 
+  -- Variable para trackear si es un terminal nuevo
+  local is_new_terminal = false
+
   -- Si es un buffer nuevo o vacío, iniciar terminal
   if
     vim.api.nvim_buf_line_count(terminal_buf) <= 1
     and vim.api.nvim_buf_get_lines(terminal_buf, 0, -1, false)[1] == ""
   then
-    vim.fn.termopen(vim.o.shell, {
+    is_new_terminal = true
+
+    -- ALTERNATIVA: Ejecutar neofetch directamente en el inicio del shell
+    local shell_cmd = vim.o.shell
+    if vim.o.shell:match("fish") then
+      -- Para fish shell
+      shell_cmd = { vim.o.shell, "-c", "neofetch; exec " .. vim.o.shell }
+    elseif vim.o.shell:match("zsh") then
+      -- Para zsh
+      shell_cmd = { vim.o.shell, "-c", "neofetch; exec zsh" }
+    elseif vim.o.shell:match("bash") then
+      -- Para bash
+      shell_cmd = { vim.o.shell, "-c", "neofetch; exec bash" }
+    else
+      -- Fallback genérico
+      shell_cmd = { vim.o.shell, "-c", "neofetch 2>/dev/null || echo 'neofetch no encontrado'; exec " .. vim.o.shell }
+    end
+
+    vim.fn.termopen(shell_cmd, {
       on_exit = function()
         -- Cuando el terminal se cierra, limpiar variables
         if terminal_win and vim.api.nvim_win_is_valid(terminal_win) then
@@ -78,18 +99,6 @@ function M.toggle_terminal()
 
   -- Entrar en modo terminal automáticamente
   vim.cmd("startinsert")
-
-  -- Mostrar mensaje de bienvenida estilizado
-  if vim.api.nvim_buf_line_count(terminal_buf) <= 1 then
-    vim.schedule(function()
-      -- Mensaje de bienvenida bonito
-      local welcome_cmd = string.format(
-        'echo "\\n🎨 Welcome to the Stylized Terminal! 🎨\\n📁 Current directory: %s\\n⚡ Ready for action!\\n"',
-        vim.fn.getcwd()
-      )
-      vim.fn.chansend(vim.bo[terminal_buf].channel, welcome_cmd .. "\n")
-    end)
-  end
 end
 
 function M.setup_terminal_keymaps()
