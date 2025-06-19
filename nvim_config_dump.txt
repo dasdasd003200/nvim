@@ -1,5 +1,5 @@
 === Configuración de Neovim en NixOS ===
-Fecha: jue 19 jun 2025 00:01:58 -04
+Fecha: jue 19 jun 2025 00:53:19 -04
 Ruta: /home/dasdasd/.config/nvim
 ===============================
 
@@ -10,6 +10,7 @@ require("config.lualine")
 require("config.lsp-config")
 require("config.litle-bird-init")
 require("config.colors")
+require("config.folder-colors")
 
 ==> Fin de init.lua <==
 
@@ -852,28 +853,27 @@ return {
           cterm_color = "65",
           name = "Zsh",
         },
-        -- Configuración específica para carpetas
+        -- Configuración inicial para carpetas (será sobrescrita por folder-colors)
         folder = {
           icon = "",
-          color = "#ffcc02", -- Color amarillo para carpetas
+          color = "#ffcc02", -- Color inicial amarillo
           name = "Folder",
         },
         -- Carpeta abierta
         folder_open = {
           icon = "",
-          color = "#ffcc02", -- Color amarillo para carpetas abiertas
+          color = "#ffcc02", -- Color inicial amarillo
           name = "FolderOpen",
         },
       },
     })
 
-    -- Forzar actualización de colores para NeoTree
+    -- Inicializar el sistema de colores de carpetas después de configurar devicons
     vim.schedule(function()
-      -- Configurar colores específicos para iconos de carpetas en NeoTree
-      vim.api.nvim_set_hl(0, "NeoTreeDirectoryIcon", { fg = "#ffcc02" })
-      vim.api.nvim_set_hl(0, "NeoTreeDirectoryName", { fg = "#ffffff" })
-      vim.api.nvim_set_hl(0, "NeoTreeFileIcon", { fg = "#8be9fd" })
-      vim.api.nvim_set_hl(0, "NeoTreeFileName", { fg = "#f8f8f2" })
+      local ok, folder_colors = pcall(require, "config.folder-colors")
+      if ok then
+        folder_colors.init()
+      end
     end)
   end,
 }
@@ -985,6 +985,17 @@ local function save_original_colors()
   }
 end
 
+-- Función para preservar colores de carpetas
+local function preserve_folder_colors()
+  local ok, folder_colors = pcall(require, "config.folder-colors")
+  if ok then
+    local current_scheme = folder_colors.get_current_scheme()
+    if current_scheme then
+      folder_colors.apply_color_scheme(current_scheme)
+    end
+  end
+end
+
 function M.toggle_transparency()
   if is_transparent then
     -- QUITAR transparencia (restaurar fondo)
@@ -1004,6 +1015,9 @@ function M.toggle_transparency()
       vim.api.nvim_set_hl(0, "NeoTreeNormal", { bg = "#111111" })
       vim.api.nvim_set_hl(0, "NeoTreeEndOfBuffer", { bg = "#111111" })
       vim.api.nvim_set_hl(0, "NeoTreeVertSplit", { bg = "#111111" })
+
+      -- PRESERVAR colores de carpetas
+      preserve_folder_colors()
     end)
 
     vim.notify("Transparencia desactivada", vim.log.levels.INFO)
@@ -1022,16 +1036,16 @@ function M.toggle_transparency()
     vim.cmd("highlight StatusLine guibg=NONE ctermbg=NONE")
     vim.cmd("highlight StatusLineNC guibg=NONE ctermbg=NONE")
 
-    -- Decidir qué hacer con NeoTree:
-    -- Opción 1: Mantener el fondo de NeoTree (recomendado para mejor UX)
-    -- vim.api.nvim_set_hl(0, "NeoTreeNormal", { bg = "#111111" })
-    -- vim.api.nvim_set_hl(0, "NeoTreeNormalNC", { bg = "#111111" })
-
-    -- Opción 2: También hacer NeoTree transparente
+    -- También hacer NeoTree transparente
     vim.cmd("highlight NeoTreeNormal guibg=NONE ctermbg=NONE")
     vim.cmd("highlight NeoTreeNormalNC guibg=NONE ctermbg=NONE")
     vim.cmd("highlight NeoTreeEndOfBuffer guibg=NONE ctermbg=NONE")
     vim.cmd("highlight NeoTreeVertSplit guibg=NONE ctermbg=NONE")
+
+    -- PRESERVAR colores de carpetas después de aplicar transparencia
+    vim.schedule(function()
+      preserve_folder_colors()
+    end)
 
     vim.notify("Transparencia activada", vim.log.levels.INFO)
   end
@@ -1576,59 +1590,186 @@ local function show_ascii_art()
   end, 3500) -- 3000 ms = 3 segundos
   -- Cerrar la ventana automáticamente después de otros 1 segundo (total de 3 segundos)
 end
-
--- Ejecutar la función al iniciar Neovim
-vim.api.nvim_create_autocmd("VimEnter", { callback = show_ascii_art })
---=================================================================
-
---
---     "                                               .=++.                                                                   ",
---     "                                             =%+===*#.                                                                 ",
---     "                                           *#========**                                                                ",
---     "                                         *#============#=    -+***#%@+                                                 ",
---     "                                       %+===============#@#++##+===+@.                                                 ",
---     "                                     :*===============**+**-----=#%%@.                                                 ",
---     "                                    :*==============#*+#=::::::::::::-*+.                                              ",
---     "                                   .*=============##+#::::::::::::::::::-%.                                            ",
---     "                                   *============#*+%-:::::::::::::::::::::+#.                                          ",
---     "                                  #+===========#+#+:::::::::::::::::::::::::%+                                         ",
---     "                                  #*=========+%*%-:::::::::::::::::::::::::::#-                                        ",
---     "                                    .#+=====**#=:::::::::::::::::::::::::::::-%                                        ",
---     "                                      .+*==#+#=:::::::::::::::::::::::::::::::+%                                       ",
---     "                                         -%+*=:::::::::::::::::::::::::::::::::@:                                      ",
---     "                                         .*#*::::::::::::::::::::::::::::::::::#-                                      ",
---     "                                        :#*%:::::::::::::::::::::::::::::::::::%:                                      ",
---     "                                        ++#%:::::::::::::::::::::::::::::::-=+-%.                                      ",
---     "                                       .+#++*::::::::::::::::::::::::::::=@*-:=#.                                      ",
---     "                                       .*@==##-*%-:::::::::::::::::::::::%-::::::+=.                                   ",
---     "                                        =###+++  =%::::::::::::::::::::::=@-::::::::*-                                 ",
---     "                                              .*   =#:::::::::::::::::::::-@#=::::::::-*-                              ",
---     "                                                ==:-=@-::::::::::::::::::#+  .=+:::::::::=+:                           ",
---     "                                                  *@@@+:::::::::::::::-##.       #-:::::::::*+                         ",
---     "                                                    ..*@+:::::::::+%#-.            =*:::::::::-*=                      ",
---     "                                                     .+:-=+#%===-.                   -+=:::::::::=+:                   ",
---     "                                                     -=::::*.                           *+:::..:::::++.                ",
---     "                                                    .%:::::*                              :#-::....::::==              ",
---     "                                                    =-::::=-                                .++::::::....-*=           ",
---     "                                                    *:::::*.                                   :*-:::.:....*           ",
---     "                                                   :+::::-#                                       -=::.....#.          ",
---     "                                                   ==::::#:                                         -*-::.:#:          ",
---     "                                                   ==::::#                                             +=::#:          ",
---     "                                                    *+:+*.                                               :*%:          ",
---     "                                                                                                                       ",
---     "                                            .*%%%%%%%%%%%%%%%%%+                                                       ",
---     "                                            +@................%@*                                                      ",
---     "                                            @%   *+       +:  .@%+                                                     ",
---     "                                           .@=   .%@+   *@#    @@*                                                     ",
---     "                                           *@:     .%@%@#      =@%-                                                    ",
---     "                                           %%        =@        :@@*                                                    ",
---     "                                          :@*        -@         %@%                                                    ",
---     "                                          =@=        -@         +@%#                                                   ",
---     "                                          +@++++++++++*++++++++++@%%.                                                  ",
---     "                                          .-----------------------.                                                    ",
---     "                                                                                                                       ",
+_G.show_little_bird = show_ascii_art
 
 ==> Fin de lua/config/litle-bird-init.lua <==
+
+----------------------------------------
+
+==> Archivo: lua/config/folder-colors.lua <==
+
+-- lua/config/folder-colors.lua
+local M = {}
+
+M.color_schemes = {
+  {
+    name = "Amarillo Brillante",
+    folder_icon = "#ffcc02",
+    folder_name = "#cccccc",
+    folder_open_icon = "#ffcc02",
+  },
+  {
+    name = "Azul Cyan",
+    folder_icon = "#8be9fd",
+    folder_name = "#cccccc",
+    folder_open_icon = "#8be9fd",
+  },
+  {
+    name = "Verde Neón",
+    folder_icon = "#50fa7b",
+    folder_name = "#cccccc",
+    folder_open_icon = "#50fa7b",
+  },
+  {
+    name = "Rosa Magenta",
+    folder_icon = "#ff79c6",
+    folder_name = "#cccccc",
+    folder_open_icon = "#ff79c6",
+  },
+  {
+    name = "Naranja",
+    folder_icon = "#ffb86c",
+    folder_name = "#cccccc",
+    folder_open_icon = "#ffb86c",
+  },
+  {
+    name = "Púrpura",
+    folder_icon = "#bd93f9",
+    folder_name = "#cccccc",
+    folder_open_icon = "#bd93f9",
+  },
+  {
+    name = "Rojo",
+    folder_icon = "#ff5555",
+    folder_name = "#cccccc",
+    folder_open_icon = "#ff5555",
+  },
+  {
+    name = "Gris Claro",
+    folder_icon = "#a8a8a8",
+    folder_name = "#cccccc",
+    folder_open_icon = "#a8a8a8",
+  },
+}
+
+-- Índice del esquema actual
+M.current_scheme_index = 1
+
+function M.apply_color_scheme(scheme)
+  -- Configurar colores específicos para iconos de carpetas en NeoTree
+  vim.api.nvim_set_hl(0, "NeoTreeDirectoryIcon", { fg = scheme.folder_icon })
+  vim.api.nvim_set_hl(0, "NeoTreeDirectoryName", { fg = scheme.folder_name })
+  vim.api.nvim_set_hl(0, "NeoTreeFileIcon", { fg = "#8be9fd" }) -- Mantener archivos en azul
+  vim.api.nvim_set_hl(0, "NeoTreeFileName", { fg = "#cccccc" }) -- Mantener archivos en blanco
+
+  local ok, devicons = pcall(require, "nvim-web-devicons")
+  if ok then
+    devicons.set_icon({
+      folder = {
+        icon = "",
+        color = scheme.folder_icon,
+        name = "Folder",
+      },
+      folder_open = {
+        icon = "",
+        color = scheme.folder_open_icon,
+        name = "FolderOpen",
+      },
+    })
+  end
+
+  vim.schedule(function()
+    vim.cmd("redraw!")
+  end)
+end
+
+function M.cycle_folder_colors()
+  local current_scheme = M.color_schemes[M.current_scheme_index]
+
+  M.apply_color_scheme(current_scheme)
+
+  vim.notify(string.format("Carpetas: %s", current_scheme.name), vim.log.levels.INFO, { title = "Colores de Carpetas" })
+
+  M.current_scheme_index = M.current_scheme_index + 1
+  if M.current_scheme_index > #M.color_schemes then
+    M.current_scheme_index = 1
+  end
+end
+
+function M.set_color_scheme(index)
+  if index >= 1 and index <= #M.color_schemes then
+    M.current_scheme_index = index
+    local scheme = M.color_schemes[index]
+    M.apply_color_scheme(scheme)
+    vim.notify(string.format("Carpetas: %s", scheme.name), vim.log.levels.INFO, { title = "Colores de Carpetas" })
+  end
+end
+
+function M.show_color_menu()
+  local options = {}
+  for i, scheme in ipairs(M.color_schemes) do
+    table.insert(options, scheme.name)
+  end
+
+  vim.ui.select(options, {
+    prompt = "Selecciona un color para las carpetas:",
+    format_item = function(item)
+      return item
+    end,
+  }, function(choice, idx)
+    if choice and idx then
+      -- CORREGIDO: Usar directamente el índice que nos da vim.ui.select
+      M.set_color_scheme(idx)
+    end
+  end)
+end
+
+-- Función de inicialización
+function M.init()
+  -- Aplicar el primer esquema al inicio
+  local initial_scheme = M.color_schemes[M.current_scheme_index]
+  M.apply_color_scheme(initial_scheme)
+
+  -- Crear autocomandos para mantener los colores
+  local augroup = vim.api.nvim_create_augroup("FolderColors", { clear = true })
+
+  vim.api.nvim_create_autocmd("FileType", {
+    pattern = "neo-tree",
+    callback = function()
+      vim.defer_fn(function()
+        -- CORREGIDO: Usar directamente el índice actual
+        local current_scheme = M.color_schemes[M.current_scheme_index]
+        M.apply_color_scheme(current_scheme)
+      end, 100)
+    end,
+    group = augroup,
+  })
+
+  -- Mantener colores cuando se abre/entra a ventanas
+  vim.api.nvim_create_autocmd({ "WinEnter", "BufWinEnter" }, {
+    pattern = "*",
+    callback = function()
+      local filetype = vim.bo.filetype
+      if filetype == "neo-tree" then
+        vim.defer_fn(function()
+          -- CORREGIDO: Usar directamente el índice actual
+          local current_scheme = M.color_schemes[M.current_scheme_index]
+          M.apply_color_scheme(current_scheme)
+        end, 50)
+      end
+    end,
+    group = augroup,
+  })
+end
+
+-- Función para obtener el esquema actual (CORREGIDA)
+function M.get_current_scheme()
+  return M.color_schemes[M.current_scheme_index]
+end
+
+return M
+
+==> Fin de lua/config/folder-colors.lua <==
 
 ----------------------------------------
 
@@ -1793,6 +1934,32 @@ vim.keymap.set("n", "<leader>ri", _G.gather_file_contents_smart, {
   desc = "Smart file content gatherer (Node.js/Python)",
 })
 
+-- NUEVOS MAPEOS PARA COLORES DE CARPETAS
+-- Mapeo para cambiar colores de carpetas
+vim.keymap.set("n", "<leader>rl", function()
+  require("config.folder-colors").cycle_folder_colors()
+end, {
+  noremap = true,
+  silent = true,
+  desc = "Cambiar colores de carpetas",
+})
+
+-- Mapeo alternativo para mostrar menú de selección de colores
+vim.keymap.set("n", "<leader>rm", function()
+  require("config.folder-colors").show_color_menu()
+end, {
+  noremap = true,
+  silent = true,
+  desc = "Menú de colores de carpetas",
+})
+
+-- Mostrar el pajarito con <leader>ry
+map("n", "<leader>ry", _G.show_little_bird, {
+  noremap = true,
+  silent = true,
+  desc = "Show little bird animation",
+})
+
 ==> Fin de lua/config/keymaps.lua <==
 
 ----------------------------------------
@@ -1802,10 +1969,10 @@ vim.keymap.set("n", "<leader>ri", _G.gather_file_contents_smart, {
 -- colors.lua: Personalización de colores
 
 -- Cambiar el color de los tipos de datos (tipados) con subrayado
-vim.cmd([[highlight Type  gui=underline]])
+-- vim.cmd([[highlight Type  gui=underline]])
 
 -- Cambiar el color de los comentarios
-vim.cmd([[highlight Comment guifg=#6272a4]])
+-- vim.cmd([[highlight Comment guifg=#6272a4]])
 
 -- -- Cambiar el color de las funciones en negrita
 -- vim.cmd([[highlight Function guifg=#8be9fd gui=bold]])
@@ -1969,25 +2136,27 @@ vim.cmd([[highlight Comment guifg=#6272a4]])
 -- -- Cambiar el color del espacio vacío al final de las líneas
 -- vim.cmd([[highlight Whitespace guifg=#6272a4]])
 --
+-- colors.lua: Personalización de colores
 
+-- Cambiar el color de los tipos de datos (tipados) con subrayado
+vim.cmd([[highlight Type  gui=underline]])
+
+-- Cambiar el color de los comentarios
+vim.cmd([[highlight Comment guifg=#6272a4]])
+
+--CAPETITAS
 -- Función para aplicar personalizaciones de colores
 local function apply_custom_colors()
-  -- Esperar un poco para asegurar que el tema se ha cargado completamente
   vim.defer_fn(function()
-    -- Cambiar el color de los tipos de datos (tipados) con subrayado
     vim.cmd([[highlight Type gui=underline]])
-
-    -- Cambiar el color de los comentarios
     vim.cmd([[highlight Comment guifg=#6272a4]])
 
-    -- Configuraciones específicas para NeoTree (refuerzo de las configuraciones del tema)
     vim.api.nvim_set_hl(0, "NeoTreeNormal", { bg = "#111111" })
     vim.api.nvim_set_hl(0, "NeoTreeEndOfBuffer", { bg = "#111111" })
     vim.api.nvim_set_hl(0, "NeoTreeVertSplit", { bg = "#111111" })
     vim.api.nvim_set_hl(0, "NeoTreeWinSeparator", { fg = "#111111", bg = "#111111" })
     vim.api.nvim_set_hl(0, "NeoTreeBorder", { fg = "#111111", bg = "#111111" })
 
-    -- Asegurar que el fondo del área de código sea consistente (solo si no hay transparencia)
     local transparent_status = false
     local ok, transparent_module = pcall(require, "config.transparent")
     if ok then
@@ -1995,22 +2164,14 @@ local function apply_custom_colors()
     end
 
     if not transparent_status then
-      -- Solo aplicar fondos si no hay transparencia activa
       vim.cmd([[highlight Normal guibg=#191919]])
       vim.cmd([[highlight NormalNC guibg=#191919]])
     end
-
-    -- Otras personalizaciones que puedas necesitar...
-    -- vim.cmd([[highlight Function guifg=#8be9fd gui=bold]])
-    -- vim.cmd([[highlight String guifg=#f1fa8c]])
-    -- etc...
   end, 100)
 end
 
--- Aplicar colores inmediatamente
 apply_custom_colors()
 
--- Autocomando para aplicar colores personalizados cuando se abre NeoTree
 vim.api.nvim_create_autocmd("FileType", {
   pattern = "neo-tree",
   callback = function()
@@ -2022,17 +2183,14 @@ vim.api.nvim_create_autocmd("FileType", {
   end,
 })
 
--- También aplicar cuando se cambie el colorscheme
 vim.api.nvim_create_autocmd("ColorScheme", {
   pattern = "*",
   callback = apply_custom_colors,
 })
 
--- Aplicar cuando se carga el buffer (para mantener consistencia)
 vim.api.nvim_create_autocmd("BufEnter", {
   pattern = "*",
   callback = function()
-    -- Solo re-aplicar si no hay transparencia
     local transparent_status = false
     local ok, transparent_module = pcall(require, "config.transparent")
     if ok then
@@ -2048,7 +2206,6 @@ vim.api.nvim_create_autocmd("BufEnter", {
   end,
 })
 
--- Autocomando adicional para cuando se abren/cierran ventanas de NeoTree
 vim.api.nvim_create_autocmd({ "WinEnter", "BufWinEnter" }, {
   pattern = "*",
   callback = function()
@@ -2058,6 +2215,7 @@ vim.api.nvim_create_autocmd({ "WinEnter", "BufWinEnter" }, {
         vim.api.nvim_set_hl(0, "NeoTreeNormal", { bg = "#111111" })
         vim.api.nvim_set_hl(0, "NeoTreeEndOfBuffer", { bg = "#111111" })
         vim.api.nvim_set_hl(0, "NeoTreeVertSplit", { bg = "#111111" })
+        -- Los colores de carpetas se mantienen por folder-colors.lua
       end, 10)
     end
   end,
