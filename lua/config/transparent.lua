@@ -19,6 +19,17 @@ local function save_original_colors()
   }
 end
 
+-- Función para preservar colores de carpetas
+local function preserve_folder_colors()
+  local ok, folder_colors = pcall(require, "config.folder-colors")
+  if ok then
+    local current_scheme = folder_colors.get_current_scheme()
+    if current_scheme then
+      folder_colors.apply_color_scheme(current_scheme)
+    end
+  end
+end
+
 function M.toggle_transparency()
   if is_transparent then
     -- QUITAR transparencia (restaurar fondo)
@@ -38,6 +49,9 @@ function M.toggle_transparency()
       vim.api.nvim_set_hl(0, "NeoTreeNormal", { bg = "#111111" })
       vim.api.nvim_set_hl(0, "NeoTreeEndOfBuffer", { bg = "#111111" })
       vim.api.nvim_set_hl(0, "NeoTreeVertSplit", { bg = "#111111" })
+
+      -- PRESERVAR colores de carpetas
+      preserve_folder_colors()
     end)
 
     vim.notify("Transparencia desactivada", vim.log.levels.INFO)
@@ -56,16 +70,16 @@ function M.toggle_transparency()
     vim.cmd("highlight StatusLine guibg=NONE ctermbg=NONE")
     vim.cmd("highlight StatusLineNC guibg=NONE ctermbg=NONE")
 
-    -- Decidir qué hacer con NeoTree:
-    -- Opción 1: Mantener el fondo de NeoTree (recomendado para mejor UX)
-    -- vim.api.nvim_set_hl(0, "NeoTreeNormal", { bg = "#111111" })
-    -- vim.api.nvim_set_hl(0, "NeoTreeNormalNC", { bg = "#111111" })
-
-    -- Opción 2: También hacer NeoTree transparente
+    -- También hacer NeoTree transparente
     vim.cmd("highlight NeoTreeNormal guibg=NONE ctermbg=NONE")
     vim.cmd("highlight NeoTreeNormalNC guibg=NONE ctermbg=NONE")
     vim.cmd("highlight NeoTreeEndOfBuffer guibg=NONE ctermbg=NONE")
     vim.cmd("highlight NeoTreeVertSplit guibg=NONE ctermbg=NONE")
+
+    -- PRESERVAR colores de carpetas después de aplicar transparencia
+    vim.schedule(function()
+      preserve_folder_colors()
+    end)
 
     vim.notify("Transparencia activada", vim.log.levels.INFO)
   end

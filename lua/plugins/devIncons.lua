@@ -33,28 +33,27 @@ return {
           cterm_color = "65",
           name = "Zsh",
         },
-        -- Configuración específica para carpetas
+        -- Configuración inicial para carpetas (será sobrescrita por folder-colors)
         folder = {
           icon = "",
-          color = "#ffcc02", -- Color amarillo para carpetas
+          color = "#ffcc02", -- Color inicial amarillo
           name = "Folder",
         },
         -- Carpeta abierta
         folder_open = {
           icon = "",
-          color = "#ffcc02", -- Color amarillo para carpetas abiertas
+          color = "#ffcc02", -- Color inicial amarillo
           name = "FolderOpen",
         },
       },
     })
 
-    -- Forzar actualización de colores para NeoTree
+    -- Inicializar el sistema de colores de carpetas después de configurar devicons
     vim.schedule(function()
-      -- Configurar colores específicos para iconos de carpetas en NeoTree
-      vim.api.nvim_set_hl(0, "NeoTreeDirectoryIcon", { fg = "#ffcc02" })
-      vim.api.nvim_set_hl(0, "NeoTreeDirectoryName", { fg = "#ffffff" })
-      vim.api.nvim_set_hl(0, "NeoTreeFileIcon", { fg = "#8be9fd" })
-      vim.api.nvim_set_hl(0, "NeoTreeFileName", { fg = "#f8f8f2" })
+      local ok, folder_colors = pcall(require, "config.folder-colors")
+      if ok then
+        folder_colors.init()
+      end
     end)
   end,
 }

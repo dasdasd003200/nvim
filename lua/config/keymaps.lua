@@ -146,3 +146,29 @@ vim.keymap.set("n", "<leader>ri", _G.gather_file_contents_smart, {
   silent = true,
   desc = "Smart file content gatherer (Node.js/Python)",
 })
+
+-- NUEVOS MAPEOS PARA COLORES DE CARPETAS
+-- Mapeo para cambiar colores de carpetas
+vim.keymap.set("n", "<leader>rl", function()
+  require("config.folder-colors").cycle_folder_colors()
+end, {
+  noremap = true,
+  silent = true,
+  desc = "Cambiar colores de carpetas",
+})
+
+-- Mapeo alternativo para mostrar menú de selección de colores
+vim.keymap.set("n", "<leader>rm", function()
+  require("config.folder-colors").show_color_menu()
+end, {
+  noremap = true,
+  silent = true,
+  desc = "Menú de colores de carpetas",
+})
+
+-- Mostrar el pajarito con <leader>ry
+map("n", "<leader>ry", _G.show_little_bird, {
+  noremap = true,
+  silent = true,
+  desc = "Show little bird animation",
+})

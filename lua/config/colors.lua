@@ -1,10 +1,10 @@
 -- colors.lua: Personalización de colores
 
 -- Cambiar el color de los tipos de datos (tipados) con subrayado
-vim.cmd([[highlight Type  gui=underline]])
+-- vim.cmd([[highlight Type  gui=underline]])
 
 -- Cambiar el color de los comentarios
-vim.cmd([[highlight Comment guifg=#6272a4]])
+-- vim.cmd([[highlight Comment guifg=#6272a4]])
 
 -- -- Cambiar el color de las funciones en negrita
 -- vim.cmd([[highlight Function guifg=#8be9fd gui=bold]])
@@ -168,6 +168,13 @@ vim.cmd([[highlight Comment guifg=#6272a4]])
 -- -- Cambiar el color del espacio vacío al final de las líneas
 -- vim.cmd([[highlight Whitespace guifg=#6272a4]])
 --
+-- colors.lua: Personalización de colores
+
+-- Cambiar el color de los tipos de datos (tipados) con subrayado
+vim.cmd([[highlight Type  gui=underline]])
+
+-- Cambiar el color de los comentarios
+vim.cmd([[highlight Comment guifg=#6272a4]])
 
 -- Función para aplicar personalizaciones de colores
 local function apply_custom_colors()
@@ -180,11 +187,11 @@ local function apply_custom_colors()
     vim.cmd([[highlight Comment guifg=#6272a4]])
 
     -- Configuraciones específicas para NeoTree (refuerzo de las configuraciones del tema)
-    vim.api.nvim_set_hl(0, "NeoTreeNormal", { bg = "#111111" })
-    vim.api.nvim_set_hl(0, "NeoTreeEndOfBuffer", { bg = "#111111" })
-    vim.api.nvim_set_hl(0, "NeoTreeVertSplit", { bg = "#111111" })
-    vim.api.nvim_set_hl(0, "NeoTreeWinSeparator", { fg = "#111111", bg = "#111111" })
-    vim.api.nvim_set_hl(0, "NeoTreeBorder", { fg = "#111111", bg = "#111111" })
+    -- vim.api.nvim_set_hl(0, "NeoTreeNormal", { bg = "#111111" })
+    -- vim.api.nvim_set_hl(0, "NeoTreeEndOfBuffer", { bg = "#111111" })
+    -- vim.api.nvim_set_hl(0, "NeoTreeVertSplit", { bg = "#111111" })
+    -- vim.api.nvim_set_hl(0, "NeoTreeWinSeparator", { fg = "#111111", bg = "#111111" })
+    -- vim.api.nvim_set_hl(0, "NeoTreeBorder", { fg = "#111111", bg = "#111111" })
 
     -- Asegurar que el fondo del área de código sea consistente (solo si no hay transparencia)
     local transparent_status = false
@@ -199,10 +206,8 @@ local function apply_custom_colors()
       vim.cmd([[highlight NormalNC guibg=#191919]])
     end
 
-    -- Otras personalizaciones que puedas necesitar...
-    -- vim.cmd([[highlight Function guifg=#8be9fd gui=bold]])
-    -- vim.cmd([[highlight String guifg=#f1fa8c]])
-    -- etc...
+    -- NO aplicar colores de carpetas aquí - eso lo maneja folder-colors.lua
+    -- Los colores de carpetas se mantienen independientes de las otras configuraciones
   end, 100)
 end
 
@@ -218,6 +223,7 @@ vim.api.nvim_create_autocmd("FileType", {
     vim.api.nvim_set_hl(0, "NeoTreeVertSplit", { bg = "#111111" })
     vim.api.nvim_set_hl(0, "NeoTreeWinSeparator", { fg = "#111111", bg = "#111111" })
     vim.api.nvim_set_hl(0, "NeoTreeBorder", { fg = "#111111", bg = "#111111" })
+    -- NO aplicar colores de carpetas aquí - folder-colors.lua se encarga de eso
   end,
 })
 
@@ -257,6 +263,7 @@ vim.api.nvim_create_autocmd({ "WinEnter", "BufWinEnter" }, {
         vim.api.nvim_set_hl(0, "NeoTreeNormal", { bg = "#111111" })
         vim.api.nvim_set_hl(0, "NeoTreeEndOfBuffer", { bg = "#111111" })
         vim.api.nvim_set_hl(0, "NeoTreeVertSplit", { bg = "#111111" })
+        -- Los colores de carpetas se mantienen por folder-colors.lua
       end, 10)
     end
   end,
