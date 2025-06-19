@@ -19,7 +19,6 @@
 --   },
 -- }
 --
-
 return {
   "nvim-neo-tree/neo-tree.nvim",
   opts = {
@@ -37,32 +36,31 @@ return {
         never_show = {},
       },
     },
-    -- Configuración de íconos de git
+    -- Configuración de íconos de git (deshabilitados)
     default_component_configs = {
       git_status = {
         symbols = {
-          -- Símbolos simples sin caracteres especiales
-          added = "+",
-          modified = "●", -- Solo el punto
-          deleted = "-",
-          renamed = "R",
-          untracked = "?",
+          added = "",
+          modified = "",
+          deleted = "",
+          renamed = "",
+          untracked = "",
           ignored = "",
-          unstaged = "●",
-          staged = "S",
-          conflict = "!",
+          unstaged = "",
+          staged = "",
+          conflict = "",
         },
       },
     },
     -- Alternativamente, si quieres deshabilitar completamente los íconos de git:
-    -- window = {
-    --   mappings = {
-    --     ["<space>"] = "none",
-    --   },
-    -- },
-    -- source_selector = {
-    --   winbar = false,
-    --   statusline = false,
-    -- },
+    window = {
+      mappings = {
+        ["<space>"] = "none",
+      },
+    },
+    source_selector = {
+      winbar = false,
+      statusline = false,
+    },
   },
 }
