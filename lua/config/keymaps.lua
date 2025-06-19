@@ -172,3 +172,19 @@ map("n", "<leader>ry", _G.show_little_bird, {
   silent = true,
   desc = "Show little bird animation",
 })
+
+-- Agregar estas líneas al final de tu lua/config/keymaps.lua
+
+-- =============================================================================
+-- TERMINAL FLOTANTE PERSONALIZADA
+-- =============================================================================
+
+-- Mapeo principal para abrir/cerrar terminal
+map("n", "<leader>rt", function()
+  require("config.terminal").toggle_terminal()
+end, { noremap = true, silent = true, desc = "Toggle Terminal" })
+
+-- Atajo rápido alternativo
+map("n", "<F11>", function()
+  require("config.terminal").toggle_terminal()
+end, { noremap = true, silent = true, desc = "Toggle Terminal" })

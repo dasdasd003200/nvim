@@ -53,14 +53,14 @@ return {
       },
     },
     -- Alternativamente, si quieres deshabilitar completamente los íconos de git:
-    window = {
-      mappings = {
-        ["<space>"] = "none",
-      },
-    },
-    source_selector = {
-      winbar = false,
-      statusline = false,
-    },
+    -- window = {
+    --   mappings = {
+    --     ["<space>"] = "none",
+    --   },
+    -- },
+    -- source_selector = {
+    --   winbar = false,
+    --   statusline = false,
+    -- },
   },
 }
