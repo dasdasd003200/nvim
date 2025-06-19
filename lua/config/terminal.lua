@@ -13,9 +13,9 @@ function M.toggle_terminal()
     return
   end
 
-  -- Calcular dimensiones (80% ancho, 70% alto)
-  local width = math.floor(vim.o.columns * 0.8)
-  local height = math.floor(vim.o.lines * 0.7)
+  -- Calcular dimensiones (85% ancho, 75% alto para más espacio)
+  local width = math.floor(vim.o.columns * 0.85)
+  local height = math.floor(vim.o.lines * 0.75)
   local row = math.floor((vim.o.lines - height) / 2)
   local col = math.floor((vim.o.columns - width) / 2)
 
@@ -28,7 +28,17 @@ function M.toggle_terminal()
     vim.api.nvim_buf_set_option(terminal_buf, "buflisted", false)
   end
 
-  -- Crear ventana flotante bonita
+  -- Obtener información del sistema para el header
+  local username = vim.fn.expand("$USER") or "user"
+  local hostname = vim.fn.hostname() or "localhost"
+  local cwd = vim.fn.fnamemodify(vim.fn.getcwd(), ":t")
+  local time = os.date("%H:%M")
+  local date = os.date("%d/%m/%Y")
+
+  -- Crear título dinámico súper estilizado
+  local title = string.format(" 🚀 %s@%s | %s | %s ", username, hostname, cwd, time)
+
+  -- Crear ventana flotante súper bonita
   terminal_win = vim.api.nvim_open_win(terminal_buf, true, {
     relative = "editor",
     width = width,
@@ -36,13 +46,15 @@ function M.toggle_terminal()
     row = row,
     col = col,
     style = "minimal",
-    border = "rounded",
-    title = " Terminal ",
+    border = { "╭", "─", "╮", "│", "╯", "─", "╰", "│" }, -- Bordes súper bonitos
+    title = title,
     title_pos = "center",
+    footer = string.format(" 💻 Terminal | ESC: Navigate | ESC ESC: Close | %s ", date),
+    footer_pos = "center",
   })
 
-  -- Configurar highlights para que se vea bonito
-  vim.api.nvim_win_set_option(terminal_win, "winhl", "Normal:Normal,FloatBorder:FloatBorder")
+  -- Aplicar highlights súper estilizados
+  M.setup_terminal_highlights()
 
   -- Si es un buffer nuevo o vacío, iniciar terminal
   if
@@ -66,6 +78,18 @@ function M.toggle_terminal()
 
   -- Entrar en modo terminal automáticamente
   vim.cmd("startinsert")
+
+  -- Mostrar mensaje de bienvenida estilizado
+  if vim.api.nvim_buf_line_count(terminal_buf) <= 1 then
+    vim.schedule(function()
+      -- Mensaje de bienvenida bonito
+      local welcome_cmd = string.format(
+        'echo "\\n🎨 Welcome to the Stylized Terminal! 🎨\\n📁 Current directory: %s\\n⚡ Ready for action!\\n"',
+        vim.fn.getcwd()
+      )
+      vim.fn.chansend(vim.bo[terminal_buf].channel, welcome_cmd .. "\n")
+    end)
+  end
 end
 
 function M.setup_terminal_keymaps()
@@ -133,12 +157,15 @@ function M.setup_terminal_keymaps()
   -- Salir del modo visual con Esc
   vim.keymap.set("v", "<Esc>", "<Esc>", { buffer = terminal_buf, desc = "Exit visual mode" })
 
-  -- Configurar opciones del buffer
+  -- Configurar opciones del buffer con estilo
   vim.schedule(function()
     if vim.api.nvim_buf_is_valid(terminal_buf) then
       vim.api.nvim_buf_set_option(terminal_buf, "number", false)
       vim.api.nvim_buf_set_option(terminal_buf, "relativenumber", false)
       vim.api.nvim_buf_set_option(terminal_buf, "signcolumn", "no")
+
+      -- Aplicar highlights después de configurar el buffer
+      M.setup_terminal_highlights()
     end
   end)
 end
@@ -146,6 +173,46 @@ end
 -- Función para verificar si el terminal está abierto
 function M.is_open()
   return terminal_win and vim.api.nvim_win_is_valid(terminal_win)
+end
+
+-- Configurar highlights súper estilizados
+function M.setup_terminal_highlights()
+  -- Crear highlights personalizados para la terminal
+  vim.api.nvim_set_hl(0, "TerminalBorder", {
+    fg = "#8be9fd", -- Cyan brillante para el borde
+    bg = "NONE",
+    bold = true,
+  })
+
+  vim.api.nvim_set_hl(0, "TerminalTitle", {
+    fg = "#50fa7b", -- Verde neón para el título
+    bg = "#282a36", -- Fondo oscuro
+    bold = true,
+    italic = true,
+  })
+
+  vim.api.nvim_set_hl(0, "TerminalFooter", {
+    fg = "#ff79c6", -- Rosa magenta para el footer
+    bg = "#282a36", -- Fondo oscuro
+    bold = true,
+  })
+
+  vim.api.nvim_set_hl(0, "TerminalBackground", {
+    fg = "#f8f8f2", -- Texto claro
+    bg = "#1e1e2e", -- Fondo ligeramente diferente para destacar
+  })
+
+  -- Aplicar los highlights a la ventana
+  if terminal_win and vim.api.nvim_win_is_valid(terminal_win) then
+    vim.api.nvim_win_set_option(
+      terminal_win,
+      "winhl",
+      "Normal:TerminalBackground,FloatBorder:TerminalBorder,FloatTitle:TerminalTitle,FloatFooter:TerminalFooter"
+    )
+
+    -- Configurar el cursor para que sea más visible
+    vim.api.nvim_win_set_option(terminal_win, "cursorline", false) -- Sin línea de cursor que pueda molestar
+  end
 end
 
 return M
