@@ -1,85 +1,446 @@
 === Configuración de Neovim en NixOS ===
-Fecha: mié 27 nov 2024 09:05:23 -04
-Ruta: /home/devdan/.config/nvim
+Fecha: jue 19 jun 2025 00:01:58 -04
+Ruta: /home/dasdasd/.config/nvim
 ===============================
 
 ==> Archivo: init.lua <==
-
 
 require("config.lazy")
 require("config.lualine")
 require("config.lsp-config")
 require("config.litle-bird-init")
-
 require("config.colors")
 
 ==> Fin de init.lua <==
 
 ----------------------------------------
 
-==> Archivo: lua/plugins/neo-tree.lua <==
+==> Archivo: lua/plugins/transparent.lua <==
 
+-- lua/plugins/transparent.lua
 return {
-  "nvim-neo-tree/neo-tree.nvim",
-  opts = {
-    filesystem = {
-      filtered_items = {
-        visible = true,
-        show_hidden_count = true,
-        hide_dotfiles = false,
-        hide_gitignored = true,
-        hide_by_name = {
-          -- '.git',
-          -- '.DS_Store',
-          -- 'thumbs.db',
-        },
-        never_show = {},
+  "folke/tokyonight.nvim",
+  lazy = false,
+  priority = 1000,
+  config = function()
+    require("tokyonight").setup({
+      -- style = "night", -- "storm", "moon", "day", "night"
+      transparent = false, -- Mantén false para control manual
+      terminal_colors = true,
+      styles = {
+        comments = { italic = true },
+        keywords = { italic = true },
+        functions = {},
+        variables = {},
+        sidebars = "dark",
+        floats = "dark",
       },
-    },
-  },
+      sidebars = { "qf", "help", "neo-tree" },
+      day_brightness = 0.3,
+      hide_inactive_statusline = false,
+      dim_inactive = false,
+      lualine_bold = false,
+
+      --- Personalizar colores base
+      on_colors = function(colors)
+        -- Aplicar tus colores personalizados
+        colors.bg = "#191919" -- Cambia el color de fondo a #191919
+        colors.bg_dark = "#191919" -- Cambia el color de fondo oscuro a #191919
+        colors.bg_sidebar = "#111111" -- Fondo para sidebars como NeoTree
+
+        -- Colores personalizados para NeoTree
+        colors.neotree = {
+          normal = "#111111",
+          end_of_buffer = "#111111",
+          vert_split = "#111111",
+        }
+      end,
+
+      --- Personalizar highlights específicos
+      on_highlights = function(highlights, colors)
+        -- Fondos principales
+        highlights.Normal = { fg = colors.fg, bg = colors.bg }
+        highlights.NormalNC = { fg = colors.fg, bg = colors.bg }
+
+        -- Configuración específica para NeoTree
+        highlights.NeoTreeNormal = { fg = colors.fg_sidebar, bg = colors.neotree.normal }
+        highlights.NeoTreeNormalNC = { fg = colors.fg_sidebar, bg = colors.neotree.normal }
+        highlights.NeoTreeEndOfBuffer = { fg = colors.bg, bg = colors.neotree.end_of_buffer }
+        highlights.NeoTreeVertSplit = { fg = colors.neotree.vert_split, bg = colors.neotree.vert_split }
+
+        -- Otros elementos de NeoTree
+        highlights.NeoTreeWinSeparator = { fg = colors.neotree.vert_split, bg = colors.neotree.vert_split }
+        highlights.NeoTreeBorder = { fg = colors.neotree.normal, bg = colors.neotree.normal }
+
+        -- Asegurar consistencia en la línea de estado
+        highlights.StatusLine = { fg = colors.fg, bg = colors.bg_statusline or colors.bg_dark }
+        highlights.StatusLineNC = { fg = colors.fg_gutter, bg = colors.bg_statusline or colors.bg_dark }
+      end,
+    })
+
+    -- Aplicar el colorscheme
+    vim.cmd([[colorscheme tokyonight]])
+
+    -- Aplicar configuraciones adicionales después de cargar el tema
+    vim.schedule(function()
+      -- Aplica los colores personalizados para NeoTree (refuerzo)
+      vim.api.nvim_set_hl(0, "NeoTreeNormal", { bg = "#111111" })
+      vim.api.nvim_set_hl(0, "NeoTreeEndOfBuffer", { bg = "#111111" })
+      vim.api.nvim_set_hl(0, "NeoTreeVertSplit", { bg = "#111111" })
+      vim.api.nvim_set_hl(0, "NeoTreeWinSeparator", { fg = "#111111", bg = "#111111" })
+      vim.api.nvim_set_hl(0, "NeoTreeBorder", { fg = "#111111", bg = "#111111" })
+
+      -- Cargar personalizaciones adicionales de colores
+      require("config.colors")
+    end)
+  end,
 }
 
-==> Fin de lua/plugins/neo-tree.lua <==
+==> Fin de lua/plugins/transparent.lua <==
 
 ----------------------------------------
 
-==> Archivo: lua/plugins/aerial.lua <==
+==> Archivo: lua/plugins/gatherer.lua <==
 
 return {
+  -- File content gatherer plugin configuration for Node.js and Python projects
   {
-    "stevearc/aerial.nvim",
-    opts = {
-      open_automatic = false,
-    },
-    -- optional dependencies
-    dependencies = {
-      "nvim-treesitter/nvim-treesitter",
-      "nvim-tree/nvim-web-devicons",
-    },
+    "nvim-lua/plenary.nvim", -- Dependency for executing the script
+    lazy = false,
+    config = function()
+      -- Function to detect project type
+      local function detect_project_type(directory)
+        local Path = require("plenary.path")
+
+        -- Check for Node.js indicators
+        local package_json = Path:new(directory, "package.json")
+        local node_modules = Path:new(directory, "node_modules")
+        local yarn_lock = Path:new(directory, "yarn.lock")
+        local package_lock = Path:new(directory, "package-lock.json")
+
+        if package_json:exists() or node_modules:exists() or yarn_lock:exists() or package_lock:exists() then
+          return "node"
+        end
+
+        -- Check for Python indicators
+        local requirements_txt = Path:new(directory, "requirements.txt")
+        local setup_py = Path:new(directory, "setup.py")
+        local pyproject_toml = Path:new(directory, "pyproject.toml")
+        local venv = Path:new(directory, "venv")
+        local pipfile = Path:new(directory, "Pipfile")
+
+        if
+          requirements_txt:exists()
+          or setup_py:exists()
+          or pyproject_toml:exists()
+          or venv:exists()
+          or pipfile:exists()
+        then
+          return "python"
+        end
+
+        -- Default to mixed if can't determine
+        return "mixed"
+      end
+
+      -- Generate script content based on project type
+      local function generate_script_content(project_type)
+        local base_script = "#!/usr/bin/env bash\n"
+          .. 'echo "Starting file content gathering for '
+          .. project_type
+          .. ' project..."\n'
+          .. "# Output file\n"
+          .. 'output_file="file_contents_output.txt"\n'
+          .. "# Ensure the output file is empty at the start\n"
+          .. 'echo "" > "$output_file"\n'
+          .. 'echo "Created empty output file: $output_file"\n'
+
+        local ignore_list = ""
+        local extensions = ""
+        local find_logic = ""
+
+        if project_type == "node" then
+          ignore_list = "ignore_list=(\n"
+            .. '    "node_modules"\n'
+            .. '    "dist"\n'
+            .. '    "build"\n'
+            .. '    ".git"\n'
+            .. '    "coverage"\n'
+            .. '    "logs"\n'
+            .. '    ".next"\n'
+            .. '    ".nuxt"\n'
+            .. '    "tree1.sh"\n'
+            .. '    "file_contents_output.txt"\n'
+            .. '    "README.md"\n'
+            .. '    ".gitignore"\n'
+            .. '    ".angular"\n'
+            .. ")\n"
+
+          extensions = "process_extensions=(\n"
+            .. '    "ts" "tsx" "js" "jsx" "json"\n'
+            .. '    "html" "css" "scss" "less" "sass"\n'
+            .. '    "md" "txt" "yaml" "yml"\n'
+            .. '    "vue" "svelte" "astro"\n'
+            .. ")\n"
+
+          find_logic = "find . -type f | sort | while read -r file; do\n"
+            .. "    # Skip if in ignored directories\n"
+            .. '    if [[ "$file" == *"/node_modules/"* || \n'
+            .. '          "$file" == *"/.git/"* || \n'
+            .. '          "$file" == *"/dist/"* || \n'
+            .. '          "$file" == *"/build/"* || \n'
+            .. '          "$file" == *"/coverage/"* || \n'
+            .. '          "$file" == *"/.next/"* ]]; then\n'
+            .. "        continue\n"
+            .. "    fi\n"
+        elseif project_type == "python" then
+          ignore_list = "ignore_list=(\n"
+            .. '    "__pycache__"\n'
+            .. '    "_pycache_"\n'
+            .. '    "venv"\n'
+            .. '    ".venv"\n'
+            -- .. '    "env"\n'
+            -- .. '    ".env"\n'
+            .. '    ".git"\n'
+            .. '    "tree1.sh"\n'
+            .. '    "file_contents_output.txt"\n'
+            .. '    "README.md"\n'
+            .. '    "infoGoogleLogin.md"\n'
+            .. '    "uploads"\n'
+            .. '    "Keys"\n'
+            .. '    ".gitignore"\n'
+            -- .. '    "requirements.txt"\n'
+            .. '    "Jenkinsfile"\n'
+            .. '    "Dockerfile"\n'
+            .. '    "commit_history.md"\n'
+            .. ")\n"
+
+          extensions = "process_extensions=(\n"
+            .. '    "py" "pyx" "pyi"\n'
+            .. '    "txt" "md" "json" "yaml" "yml"\n'
+            .. '    "sh" "sql" "html" "css"\n'
+            .. '    "js" "toml" "cfg" "ini"\n'
+            .. ")\n"
+
+          find_logic = "# Enable globbing options for Python\n"
+            .. "shopt -s dotglob nullglob globstar\n"
+            .. "for file in **; do\n"
+            .. "    # Skip if matches pycache pattern\n"
+            .. '    if [[ "$file" == *"__pycache__"* || "$file" == *"_pycache_"* ]]; then\n'
+            .. "        continue\n"
+            .. "    fi\n"
+        else -- mixed project
+          ignore_list = "ignore_list=(\n"
+            .. '    "node_modules"\n'
+            .. '    "dist"\n'
+            .. '    "build"\n'
+            .. '    "__pycache__"\n'
+            .. '    "_pycache_"\n'
+            .. '    "venv"\n'
+            .. '    ".venv"\n'
+            .. '    ".git"\n'
+            .. '    "coverage"\n'
+            .. '    "tree1.sh"\n'
+            .. '    "file_contents_output.txt"\n'
+            .. '    "README.md"\n'
+            .. '    ".gitignore"\n'
+            .. ")\n"
+
+          extensions = "process_extensions=(\n"
+            .. '    "ts" "tsx" "js" "jsx" "json"\n'
+            .. '    "py" "pyx" "pyi"\n'
+            .. '    "html" "css" "scss" "less"\n'
+            .. '    "md" "txt" "yaml" "yml"\n'
+            .. '    "sh" "sql" "toml" "cfg"\n'
+            .. ")\n"
+
+          find_logic = "find . -type f | sort | while read -r file; do\n"
+            .. "    # Skip if in ignored directories\n"
+            .. '    if [[ "$file" == *"/node_modules/"* || \n'
+            .. '          "$file" == *"/.git/"* || \n'
+            .. '          "$file" == *"/__pycache__/"* || \n'
+            .. '          "$file" == *"/_pycache_/"* || \n'
+            .. '          "$file" == *"/venv/"* || \n'
+            .. '          "$file" == *"/dist/"* ]]; then\n'
+            .. "        continue\n"
+            .. "    fi\n"
+        end
+
+        -- Common functions
+        local common_functions = "# Función para verificar si una ruta debe ser ignorada\n"
+          .. "should_ignore() {\n"
+          .. '    local path="$1"\n'
+          .. '    for ignore in "${ignore_list[@]}"; do\n'
+          .. '        if [[ "$path" == "$ignore" || "$path" == *"/$ignore"* || "$path" == *"$ignore/"* ]]; then\n'
+          .. "            return 0\n"
+          .. "        fi\n"
+          .. "    done\n"
+          .. "    return 1\n"
+          .. "}\n"
+          .. "# Función para verificar si una extensión está en la lista de procesables\n"
+          .. "is_processable_extension() {\n"
+          .. '    local file="$1"\n'
+          .. '    for ext in "${process_extensions[@]}"; do\n'
+          .. '        if [[ "$file" == *."$ext" ]]; then\n'
+          .. "            return 0\n"
+          .. "        fi\n"
+          .. "    done\n"
+          .. "    return 1\n"
+          .. "}\n"
+
+        -- Processing logic
+        local processing_logic = ""
+        if project_type == "python" then
+          processing_logic = "    # Solo procesa archivos, no directorios\n"
+            .. '    if [[ -f "$file" ]]; then\n'
+            .. "        # Convierte la ruta del archivo a relativa\n"
+            .. '        relative_path="${file#./}"\n'
+            .. '        if [[ "$relative_path" == "$file" ]]; then\n'
+            .. '            relative_path="$file"\n'
+            .. "        fi\n"
+            .. "        # Verifica si el archivo debe ser ignorado\n"
+            .. '        if should_ignore "$relative_path"; then\n'
+            .. "            continue\n"
+            .. "        fi\n"
+            .. "        # Verifica si es un archivo procesable y no es .pyc\n"
+            .. '        if is_processable_extension "$file" && [[ "$file" != *.pyc ]]; then\n'
+            .. '            echo "Processing: $relative_path"\n'
+            .. "            # Añade el nombre del archivo\n"
+            .. '            printf "==> %s <==\\n" "$relative_path" >> "$output_file"\n'
+            .. "            # Muestra el contenido del archivo\n"
+            .. '            cat --show-nonprinting -- "$file" >> "$output_file" 2>/dev/null || cat "$file" >> "$output_file"\n'
+            .. "            # Añade separador\n"
+            .. '            echo >> "$output_file"\n'
+            .. "            file_count=$((file_count+1))\n"
+            .. "        fi\n"
+            .. "    fi\n"
+        else
+          processing_logic = "    # Convierte la ruta del archivo a relativa\n"
+            .. '    relative_path="${file#./}"\n'
+            .. "    # Verifica si el archivo debe ser ignorado\n"
+            .. '    if should_ignore "$relative_path"; then\n'
+            .. "        continue\n"
+            .. "    fi\n"
+            .. "    # Verifica si es un archivo procesable\n"
+            .. '    if [[ -f "$file" ]] && is_processable_extension "$file"; then\n'
+            .. '        echo "Processing: $relative_path"\n'
+            .. "        # Añade el nombre del archivo\n"
+            .. '        echo "==> $relative_path <==" >> "$output_file"\n'
+            .. "        # Muestra el contenido del archivo\n"
+            .. '        cat "$file" >> "$output_file"\n'
+            .. "        # Añade separador\n"
+            .. '        echo -e "\\n---\\n" >> "$output_file"\n'
+            .. "        file_count=$((file_count+1))\n"
+            .. "    fi\n"
+        end
+
+        -- Complete script
+        return base_script
+          .. ignore_list
+          .. extensions
+          .. common_functions
+          .. 'echo "Scanning for files..."\n'
+          .. "file_count=0\n"
+          .. find_logic
+          .. processing_logic
+          .. "done\n"
+          .. 'echo "Script execution complete. Processed $file_count files. Output has been written to $output_file"\n'
+      end
+
+      -- Main function to gather file contents
+      _G.gather_file_contents_smart = function()
+        local Job = require("plenary.job")
+        local Path = require("plenary.path")
+        local current_file = vim.fn.expand("%:p")
+        local current_dir = vim.fn.fnamemodify(current_file, ":h")
+
+        -- Detect project type
+        local project_type = detect_project_type(current_dir)
+
+        -- Store the original working directory before changing it
+        local original_dir = vim.fn.getcwd()
+
+        -- Notify user about project type and script start
+        vim.notify(
+          string.format(
+            "Detected %s project. Starting file content gathering in: %s",
+            project_type:upper(),
+            current_dir
+          ),
+          vim.log.levels.INFO
+        )
+
+        -- Change to the current file's directory
+        vim.fn.chdir(current_dir)
+
+        -- Generate script content based on project type
+        local script_content = generate_script_content(project_type)
+
+        -- Create a temporary script file
+        local script_path = Path:new(vim.fn.tempname() .. ".sh")
+        script_path:write(script_content, "w")
+        vim.fn.system("chmod +x " .. script_path.filename)
+
+        -- Run the script and capture stdout
+        Job
+          :new({
+            command = script_path.filename,
+            cwd = current_dir,
+            on_stdout = function(_, data)
+              -- Print script output to help with debugging
+              print(data)
+            end,
+            on_exit = function(j, return_val)
+              -- Return to the original directory no matter what
+              vim.schedule(function()
+                vim.cmd("cd " .. vim.fn.fnameescape(original_dir))
+              end)
+
+              if return_val == 0 then
+                -- Check if the output file exists and is not empty
+                local output_file = current_dir .. "/file_contents_output.txt"
+                local f = io.open(output_file, "r")
+                if f then
+                  local content = f:read("*all")
+                  f:close()
+                  if content and #content > 0 then
+                    vim.notify(
+                      string.format(
+                        "File contents gathered successfully for %s project to file_contents_output.txt in %s",
+                        project_type:upper(),
+                        current_dir
+                      ),
+                      vim.log.levels.INFO
+                    )
+                  else
+                    vim.notify(
+                      "Warning: Output file is empty. No files may have matched your criteria.",
+                      vim.log.levels.WARN
+                    )
+                  end
+                else
+                  vim.notify("Error: Could not open output file to verify contents.", vim.log.levels.ERROR)
+                end
+                -- Clean up temporary script
+                script_path:rm()
+              else
+                vim.notify(
+                  string.format("Error running file contents gatherer script. Exit code: %d", return_val),
+                  vim.log.levels.ERROR
+                )
+              end
+            end,
+          })
+          :start()
+      end
+
+      -- Legacy function for backward compatibility
+      _G.gather_file_contents_for_node = _G.gather_file_contents_smart
+    end,
   },
 }
 
-
-
-==> Fin de lua/plugins/aerial.lua <==
-
-----------------------------------------
-
-==> Archivo: lua/plugins/scrollview.lua <==
-
-return {
-  {
-    "dstein64/nvim-scrollview",
-    excluded_filetypes = { "nerdtree" },
-    current_only = true,
-    base = "buffer",
-    column = 80,
-    signs_on_startup = { "all" },
-    diagnostics_severities = { vim.diagnostic.severity.ERROR },
-  },
-}
-
-==> Fin de lua/plugins/scrollview.lua <==
+==> Fin de lua/plugins/gatherer.lua <==
 
 ----------------------------------------
 
@@ -93,31 +454,6 @@ return {
 }
 
 ==> Fin de lua/plugins/vim-visual-multi.lua <==
-
-----------------------------------------
-
-==> Archivo: lua/plugins/material.lua <==
-
--- Archivo: ~/.config/nvim/lua/plugins/init.lua
-
-return {
-  -- oceanic-next
-  { "mhartington/oceanic-next" },
-
-  -- Nord
-  { "shaunsingh/nord.nvim" },
-
-  -- One Dark
-  { "navarasu/onedark.nvim" },
-
-  -- Nightfox
-  { "EdenEast/nightfox.nvim" },
-
-  --nvcode
-  { "Mofiqul/vscode.nvim" },
-}
-
-==> Fin de lua/plugins/material.lua <==
 
 ----------------------------------------
 
@@ -321,15 +657,248 @@ return {
 
 ==> Fin de lua/plugins/example.lua <==
 
+----------------------------------------
 
-==> Archivo: lua/config/options.lua <==
+==> Archivo: lua/plugins/aerial.lua <==
 
--- Options are automatically loaded before lazy.nvim startup
--- Default options that are always set: https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/options.lua
--- Add any additional options here
+return {
+  {
+    "stevearc/aerial.nvim",
+    opts = {
+      open_automatic = false,
+    },
+    -- optional dependencies
+    dependencies = {
+      "nvim-treesitter/nvim-treesitter",
+      "nvim-tree/nvim-web-devicons",
+    },
+  },
+}
 
-==> Fin de lua/config/options.lua <==
+-- return {
+--   {
+--     "stevearc/aerial.nvim",
+--     opts = {
+--       open_automatic = false,
+--       backends = {
+--         ["_"] = { "treesitter", "lsp" },
+--         html = { "treesitter" },
+--         typescript = { "treesitter" },
+--       },
+--       filter_kind = {
+--         -- Para HTML/Angular
+--         "Component",
+--         "Tag",
+--         "Template",
+--         "Section",
+--         -- Para TypeScript
+--         "Class",
+--         "Function",
+--         "Method",
+--         "Interface",
+--         "Enum",
+--       },
+--       -- Colapsar contenido interno
+--       collapse_level = 0,
+--       show_guides = false,
+--     },
+--     dependencies = {
+--       "nvim-treesitter/nvim-treesitter",
+--       "nvim-web-devicons",
+--     },
+--   },
+-- }
 
+
+==> Fin de lua/plugins/aerial.lua <==
+
+----------------------------------------
+
+==> Archivo: lua/plugins/material.lua <==
+
+-- Archivo: ~/.config/nvim/lua/plugins/init.lua
+
+return {
+  -- oceanic-next
+  { "mhartington/oceanic-next" },
+
+  -- Nord
+  { "shaunsingh/nord.nvim" },
+
+  -- One Dark
+  { "navarasu/onedark.nvim" },
+
+  -- Nightfox
+  { "EdenEast/nightfox.nvim" },
+
+  --nvcode
+  { "Mofiqul/vscode.nvim" },
+}
+
+==> Fin de lua/plugins/material.lua <==
+
+----------------------------------------
+
+==> Archivo: lua/plugins/neo-tree.lua <==
+
+return {
+  "nvim-neo-tree/neo-tree.nvim",
+  opts = {
+    filesystem = {
+      filtered_items = {
+        visible = true,
+        show_hidden_count = true,
+        hide_dotfiles = false,
+        hide_gitignored = true,
+        hide_by_name = {
+          -- '.git',
+          -- '.DS_Store',
+          -- 'thumbs.db',
+        },
+        never_show = {},
+      },
+    },
+  },
+}
+
+==> Fin de lua/plugins/neo-tree.lua <==
+
+----------------------------------------
+
+==> Archivo: lua/plugins/prettier.lua <==
+
+-- -- lua/plugins/prettier.lua
+-- return {
+--   {
+--     "neovim/nvim-lspconfig",
+--     opts = {
+--       servers = {
+--         -- Configurar prettier como servidor LSP
+--         prettierd = {},
+--       },
+--     },
+--   },
+--   {
+--     "jose-elias-alvarez/null-ls.nvim",
+--     opts = function()
+--       return {
+--         sources = {
+--           require("null-ls").builtins.formatting.prettier,
+--         },
+--       }
+--     end,
+--   },
+-- }
+
+
+-- lua/plugins/prettier.lua
+return {
+  {
+    "stevearc/conform.nvim",
+    opts = {
+      formatters_by_ft = {
+        javascript = { "prettier" },
+        typescript = { "prettier" },
+        javascriptreact = { "prettier" },
+        typescriptreact = { "prettier" },
+        css = { "prettier" },
+        html = { "prettier" },
+        json = { "prettier" },
+        yaml = { "prettier" },
+        markdown = { "prettier" },
+      },
+    },
+  },
+}
+
+==> Fin de lua/plugins/prettier.lua <==
+
+----------------------------------------
+
+==> Archivo: lua/plugins/devIncons.lua <==
+
+-- lua/plugins/devicons.lua
+return {
+  "nvim-tree/nvim-web-devicons",
+  config = function()
+    require("nvim-web-devicons").setup({
+      -- Habilitar colores por defecto
+      color_icons = true,
+      -- Usar colores por defecto
+      default = true,
+      -- Configuración estricta para asegurar colores
+      strict = true,
+      -- Configuraciones específicas para carpetas
+      override_by_filename = {
+        [".gitignore"] = {
+          icon = "",
+          color = "#f1502f",
+          name = "Gitignore",
+        },
+      },
+      -- Configuraciones por extensión
+      override_by_extension = {
+        ["log"] = {
+          icon = "",
+          color = "#81e043",
+          name = "Log",
+        },
+      },
+      -- Configuraciones específicas para tipos de archivo
+      override = {
+        zsh = {
+          icon = "",
+          color = "#428850",
+          cterm_color = "65",
+          name = "Zsh",
+        },
+        -- Configuración específica para carpetas
+        folder = {
+          icon = "",
+          color = "#ffcc02", -- Color amarillo para carpetas
+          name = "Folder",
+        },
+        -- Carpeta abierta
+        folder_open = {
+          icon = "",
+          color = "#ffcc02", -- Color amarillo para carpetas abiertas
+          name = "FolderOpen",
+        },
+      },
+    })
+
+    -- Forzar actualización de colores para NeoTree
+    vim.schedule(function()
+      -- Configurar colores específicos para iconos de carpetas en NeoTree
+      vim.api.nvim_set_hl(0, "NeoTreeDirectoryIcon", { fg = "#ffcc02" })
+      vim.api.nvim_set_hl(0, "NeoTreeDirectoryName", { fg = "#ffffff" })
+      vim.api.nvim_set_hl(0, "NeoTreeFileIcon", { fg = "#8be9fd" })
+      vim.api.nvim_set_hl(0, "NeoTreeFileName", { fg = "#f8f8f2" })
+    end)
+  end,
+}
+
+==> Fin de lua/plugins/devIncons.lua <==
+
+----------------------------------------
+
+==> Archivo: lua/plugins/scrollview.lua <==
+
+return {
+  {
+    "dstein64/nvim-scrollview",
+    excluded_filetypes = { "nerdtree" },
+    current_only = true,
+    base = "buffer",
+    column = 80,
+    signs_on_startup = { "all" },
+    diagnostics_severities = { vim.diagnostic.severity.ERROR },
+  },
+}
+
+==> Fin de lua/plugins/scrollview.lua <==
+
+----------------------------------------
 
 ==> Archivo: lua/config/lazy.lua <==
 
@@ -391,11 +960,148 @@ require("lazy").setup({
 
 ==> Fin de lua/config/lazy.lua <==
 
+----------------------------------------
+
+==> Archivo: lua/config/transparent.lua <==
+
+-- lua/config/transparent.lua
+local M = {}
+local is_transparent = false -- Inicia sin transparencia
+
+-- Función para guardar los colores originales del tema
+local function save_original_colors()
+  M.original_colors = {
+    Normal = vim.api.nvim_get_hl(0, { name = "Normal" }),
+    NormalNC = vim.api.nvim_get_hl(0, { name = "NormalNC" }),
+    EndOfBuffer = vim.api.nvim_get_hl(0, { name = "EndOfBuffer" }),
+    VertSplit = vim.api.nvim_get_hl(0, { name = "VertSplit" }),
+    SignColumn = vim.api.nvim_get_hl(0, { name = "SignColumn" }),
+    LineNr = vim.api.nvim_get_hl(0, { name = "LineNr" }),
+    CursorLineNr = vim.api.nvim_get_hl(0, { name = "CursorLineNr" }),
+    StatusLine = vim.api.nvim_get_hl(0, { name = "StatusLine" }),
+    StatusLineNC = vim.api.nvim_get_hl(0, { name = "StatusLineNC" }),
+    NeoTreeNormal = vim.api.nvim_get_hl(0, { name = "NeoTreeNormal" }),
+    NeoTreeNormalNC = vim.api.nvim_get_hl(0, { name = "NeoTreeNormalNC" }),
+  }
+end
+
+function M.toggle_transparency()
+  if is_transparent then
+    -- QUITAR transparencia (restaurar fondo)
+    -- Primero recarga el tema completo
+    vim.cmd("colorscheme tokyonight")
+
+    -- Luego restaura las personalizaciones de colores
+    vim.schedule(function()
+      -- Recargar las personalizaciones de colores
+      require("config.colors")
+
+      -- Restaurar configuraciones específicas de tu tema personalizado
+      vim.cmd([[highlight Normal guibg=#191919]])
+      vim.cmd([[highlight NormalNC guibg=#191919]])
+
+      -- Restaurar colores de NeoTree
+      vim.api.nvim_set_hl(0, "NeoTreeNormal", { bg = "#111111" })
+      vim.api.nvim_set_hl(0, "NeoTreeEndOfBuffer", { bg = "#111111" })
+      vim.api.nvim_set_hl(0, "NeoTreeVertSplit", { bg = "#111111" })
+    end)
+
+    vim.notify("Transparencia desactivada", vim.log.levels.INFO)
+  else
+    -- Guardar colores originales antes de aplicar transparencia
+    save_original_colors()
+
+    -- ACTIVAR transparencia
+    vim.cmd("highlight Normal guibg=NONE ctermbg=NONE")
+    vim.cmd("highlight NormalNC guibg=NONE ctermbg=NONE")
+    vim.cmd("highlight EndOfBuffer guibg=NONE ctermbg=NONE")
+    vim.cmd("highlight VertSplit guibg=NONE ctermbg=NONE")
+    vim.cmd("highlight SignColumn guibg=NONE ctermbg=NONE")
+    vim.cmd("highlight LineNr guibg=NONE ctermbg=NONE")
+    vim.cmd("highlight CursorLineNr guibg=NONE ctermbg=NONE")
+    vim.cmd("highlight StatusLine guibg=NONE ctermbg=NONE")
+    vim.cmd("highlight StatusLineNC guibg=NONE ctermbg=NONE")
+
+    -- Decidir qué hacer con NeoTree:
+    -- Opción 1: Mantener el fondo de NeoTree (recomendado para mejor UX)
+    -- vim.api.nvim_set_hl(0, "NeoTreeNormal", { bg = "#111111" })
+    -- vim.api.nvim_set_hl(0, "NeoTreeNormalNC", { bg = "#111111" })
+
+    -- Opción 2: También hacer NeoTree transparente
+    vim.cmd("highlight NeoTreeNormal guibg=NONE ctermbg=NONE")
+    vim.cmd("highlight NeoTreeNormalNC guibg=NONE ctermbg=NONE")
+    vim.cmd("highlight NeoTreeEndOfBuffer guibg=NONE ctermbg=NONE")
+    vim.cmd("highlight NeoTreeVertSplit guibg=NONE ctermbg=NONE")
+
+    vim.notify("Transparencia activada", vim.log.levels.INFO)
+  end
+  is_transparent = not is_transparent
+end
+
+-- Función para inicializar transparencia si se desea al inicio
+function M.init_transparency()
+  if is_transparent then
+    M.toggle_transparency()
+  end
+end
+
+function M.get_status()
+  return is_transparent
+end
+
+return M
+
+==> Fin de lua/config/transparent.lua <==
+
+----------------------------------------
+
+==> Archivo: lua/config/options.lua <==
+
+-- Options are automatically loaded before lazy.nvim startup
+-- Default options that are always set: https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/options.lua
+-- Add any additional options here
+vim.g.lazyvim_prettier_needs_config = false
+
+==> Fin de lua/config/options.lua <==
+
+----------------------------------------
 
 ==> Archivo: lua/config/lsp-config.lua <==
 
+-- lua/config/lsp-config.lua
+-- SIMPLEST SOLUTION: Just make the Django "errors" look like VSCode warnings
+
 local lspconfig = require("lspconfig")
 
+lspconfig.pyright.setup({
+  settings = {
+    python = {
+      analysis = {
+        -- Keep basic type checking but make it less strict
+        typeCheckingMode = "basic", -- Less strict than "standard"
+        autoSearchPaths = true,
+        useLibraryCodeForTypes = true,
+        autoImportCompletions = true,
+
+        -- Turn Django "errors" into "information" (like VSCode does)
+        diagnosticSeverityOverrides = {
+          reportArgumentType = "information", -- Your BooleanField issue
+          reportIncompatibleVariableOverride = "information", -- Your Meta class issue
+          reportReturnType = "information", -- Your property return issue
+          reportGeneralTypeIssues = "information", -- General Django patterns
+          reportOptionalMemberAccess = "information", -- Django optional access
+          reportUnknownMemberType = "information", -- Django dynamic attributes
+          reportUnknownArgumentType = "information", -- Django dynamic args
+          reportUntypedFunctionDecorator = "information", -- Django decorators like @login_required
+          reportUntypedBaseClass = "information", -- Django model inheritance
+          reportMissingTypeStubs = "information", -- Missing Django stubs
+        },
+      },
+    },
+  },
+})
+
+-- Keep your existing TypeScript config
 lspconfig.vtsls.setup({
   settings = {
     typescript = {
@@ -406,7 +1112,523 @@ lspconfig.vtsls.setup({
   },
 })
 
+-- Configure diagnostics to display like VSCode
+vim.diagnostic.config({
+  virtual_text = {
+    -- Only show errors and warnings as virtual text, not info
+    severity = { min = vim.diagnostic.severity.WARN },
+    source = "if_many",
+    format = function(diagnostic)
+      return string.format("%s", diagnostic.message)
+    end,
+  },
+  signs = {
+    -- Show all levels in the sign column but with different icons
+    severity = { min = vim.diagnostic.severity.HINT },
+  },
+  underline = {
+    -- Only underline warnings and errors, not info
+    severity = { min = vim.diagnostic.severity.WARN },
+  },
+  float = {
+    source = "always",
+    border = "rounded",
+  },
+  severity_sort = true,
+  update_in_insert = false, -- Don't show while typing (like VSCode)
+})
+
+-- Custom diagnostic signs (like VSCode)
+local signs = {
+  { name = "DiagnosticSignError", text = "❌" },
+  { name = "DiagnosticSignWarn", text = "⚠️" },
+  { name = "DiagnosticSignHint", text = "💡" },
+  { name = "DiagnosticSignInfo", text = "ℹ️" },
+}
+
+for _, sign in ipairs(signs) do
+  vim.fn.sign_define(sign.name, { texthl = sign.name, text = sign.text, numhl = "" })
+end
+
+-- -- lua/config/lsp-config.lua
+-- local lspconfig = require("lspconfig")
+--
+-- -- Configure pylsp (Python LSP) instead of or alongside other Python LSPs
+-- lspconfig.pylsp.setup({
+--   settings = {
+--     pylsp = {
+--       plugins = {
+--         -- Disable some strict checking
+--         pycodestyle = { enabled = false },
+--         mccabe = { enabled = false },
+--         pyflakes = { enabled = false },
+--         -- Use autopep8 for formatting instead of strict linting
+--         autopep8 = { enabled = true },
+--         -- Enable rope for refactoring
+--         rope_completion = { enabled = true },
+--       },
+--     },
+--   },
+-- })
+--
+-- -- Configure Pyright with Django-friendly settings
+-- lspconfig.pyright.setup({
+--   settings = {
+--     python = {
+--       analysis = {
+--         -- Make Pyright less strict for Django
+--         typeCheckingMode = "basic", -- Change from "strict" to "basic"
+--         autoSearchPaths = true,
+--         useLibraryCodeForTypes = true,
+--         autoImportCompletions = true,
+--         diagnosticMode = "workspace",
+--         -- Disable specific strict checks that cause issues with Django
+--         diagnosticSeverityOverrides = {
+--           reportArgumentType = "none", -- Disable the argument type errors you're seeing
+--           reportIncompatibleVariableOverride = "none", -- Disable Meta class override warnings
+--           reportReturnType = "none", -- Disable return type mismatches for Django fields
+--           reportGeneralTypeIssues = "none", -- More lenient on general type issues
+--           reportOptionalMemberAccess = "information", -- Less strict on optional access
+--           reportOptionalOperand = "information",
+--           reportOptionalSubscript = "information",
+--           reportPrivateImportUsage = "information",
+--         },
+--       },
+--     },
+--   },
+-- })
+--
+-- -- If you want to use both, you can configure them for different purposes
+-- lspconfig.vtsls.setup({
+--   settings = {
+--     typescript = {
+--       inlayHints = {
+--         includeInlayParameterNameHints = "none",
+--       },
+--     },
+--   },
+-- })
+
 ==> Fin de lua/config/lsp-config.lua <==
+
+----------------------------------------
+
+==> Archivo: lua/config/litle-bird-init.lua <==
+
+local function show_ascii_art()
+  local buf = vim.api.nvim_create_buf(false, true) -- Crear un buffer flotante
+
+  -- Definir los tres artes ASCII
+  local ascii_art_1 = {
+
+    "                                         *%%@+*..*####################################%.               ",
+    "                                              .=..=%##################################=                ",
+    "                                               -:  -############################+:=##=.                ",
+    "                                               .*. .+########################@-:::::*.                 ",
+    "                                                 --.=%#######################--::::::-=.               ",
+    "                                                  .#@@#######################*--:::::::--.             ",
+    "                                                    .*%#######################%+--:::::::=:            ",
+    "                                                    .##%%###################%+..:=-:::::::-+..         ",
+    "                                                   .+######%%%%########%#=-     ..=--:::::::-=.        ",
+    "                                                  .+#######+                       :=--:::::::=-.      ",
+    "                                                 .+#######+.                        .:--::::::::=:.    ",
+    "                                                 =########.                           .---:::::::-=.   ",
+    "                                               .+#######*.                             ..--::::::::-   ",
+    "                                               -########:                                .:=-::::::-   ",
+    "                                              :########.                                    --:::::-   ",
+    "                                              -%######-.                                     .---::-   ",
+    "                                              .######-                                         .--:-   ",
+    "                                                                                                 ---   ",
+    "                                                                                                   =   ",
+    "                                                                                                       ",
+    "                                                                                                       ",
+    "                                                                                                       ",
+    "                                                                                                       ",
+    "                                                                                                       ",
+    "                                                                                                       ",
+    "                                                                                                       ",
+    "                                                                                                       ",
+    "       .=====================   -+ =================+-  -+==============+--  -+===============+-.       ",
+    "       --                  =.-=-:                   .#+%.                :%.-=.               .#=.     ",
+    "      -+.                 .+.*.#..                   .+==                ..@..#.                .#=.   ",
+    "    .=-    :::.%=::::     %.-+=:     -%-    .#*.     .+.*.   .#-    :%.    .+..*.      .*#.       :*   ",
+    "    -=.      .++         -=.#.*.      .=%-:#+.       .+-=-    .#:    -# .   .#-.+-       :%-.      .   ",
+    "  .==       .-*.         +.--:=        ..+#.          :%:#.    .@:   .+#.     +-.+=.      .#*.         ",
+    " .:=       .-@.         .*.=.--          +*           .#===     .%-   .%-     .=*.:+       .-@:        ",
+    ".-+.       .@.         .#-.*.*.          ++.           :*.*.      ..::.         -= :%.      ..=.       ",
+    ":=        ...          :% #.:*.         .=-             *:=-                     :#. *:                ",
+    "*                     .*.:*.+-                          -+.*.                     .*..*=.              ",
+  }
+
+  local ascii_art_2 = {
+
+    "                            .-++======*#+#%################################.                         ",
+    "                              .=+++++#*#%##################################%.                        ",
+    "                                .+++#+#%####################################*.                       ",
+    "                                  -#+%#######################################:                       ",
+    "                                 :**%########################################*                       ",
+    "                               .=*#%#########################################%.                      ",
+    "                               :***%##########################################:                      ",
+    "                              .#**+###########################################.                      ",
+    "                              .**+++%########################################=                       ",
+    "                              .*#+++#+-*################################**###.                       ",
+    "                                    .+.  +############################=-::-*-.                       ",
+    "                                     .-.  :##########################-::::::-+=..                    ",
+    "                                      .=   =########################+--:::::::-+=.                   ",
+    "                                        :=.-##########################+-::::::::-+-..                ",
+    "                                          :@@%########################*:=-:::::::::+-.               ",
+    "                                           .:#%####################%+.  .:=---:::::::=-              ",
+    "                                             +##%%%###########**=         .-=--::::::::=-.           ",
+    "                                            :%######=.                      .=--:::::::::=-.         ",
+    "                                           .@######%.                         .=---::::::::==        ",
+    "                                          .+######%:                            .----::::::::=-.     ",
+    "                                          :%######=                               .=--:::::::::=-.   ",
+    "                                         .@#######.                                  =--:::::::::=-. ",
+    "                                        .*######%:.                                   .=--:::::::::= ",
+    "                                        :##**###+                                       .=--:::::::: ",
+    "                                        ########.                                         .=--:::::: ",
+    "                                        :%####%=                                            .+---::- ",
+    "                                                                                             .:+---- ",
+    "        .-+===============+-.  .-+=================+-. .-+=============+-..-+=================:.:=-- ",
+    "       :+                  =.=*-:                   :+#*.               .**.+:               .=*..:+ ",
+    "      .*.                 .* +:#              .      :=%:                .+-.*-                 =+ . ",
+    "     -+.   ::::#*:::::   .#.:+--   ..*#.     =%:     .+.*.   .%.   .**.   .-+.-=       :%-       .+= ",
+    "    .+.      .=#.        :+.#.*       :#*..+#:.      .+.+:   .:*.    *=.    -*.-*.      .*+.       : ",
+    "   :#.       :#.         +.:=:-         .%%.          =*-=    .=%.   .#:     .*..*.      .=%:        ",
+    "  .+.       :@:         .*.=:--         .*+           .@.#.    .=*.   .%.     .#:.#-       .#+       ",
+    " .#.       .-:          *-.+.*.         .*=            ++:*.     .-===-.       .*:.+=       .=*.     ",
+    ".+.                    :%.+::*          .*:             #.+:                    .+:.-+.              ",
+    "#.                    .+:.# +=                        . +---                      ==.-#.             ",
+  }
+
+  local ascii_art_3 = {
+
+    "                            :#+++++=.                                                                ",
+    "                        .::+++++++++++-.           .                                                  ",
+    "                       .=++++++++++++++-.     .:=*****+.                                             ",
+    "                      =++++++++++++==+=+*=.-#+++##++++*.                                             ",
+    "                    .*+++++=+++========*#*+*#%%%%%##*+*.                                             ",
+    "                  .:*++++=++++++++==+##+*%%############%%*-.                                         ",
+    "                  =++++++++++++++++*#+*%###################%+.                                       ",
+    "                 .*+++++++++++++++%+%%#######################%+.                                     ",
+    "                :*++++++++++++++#*#%############################-                                    ",
+    "               .*++++++++++++++#+#################################.                                  ",
+    "               .+*+++++++++++#**%#################################+                                  ",
+    "                 ..#*++++++*#+#%###################################=                                 ",
+    "                    .=*++++#+#######################################-                                ",
+    "                       .*+%+########################################=.                               ",
+    "                        .++%########################################+.                               ",
+    "                        -++#########################################+.                               ",
+    "                       -*+%##########################################.                               ",
+    "                     ..*+**#####################################**##=.                               ",
+    "                     .-*+++###################################=--::--.                               ",
+    "                      :+*+++@..=#############################+-::::::-=:                             ",
+    "                      .-*+**+-    +##########################--:::::::::--:.                         ",
+    "                             :-.    *##########################=---::::::::-+.                       ",
+    "                              .-.    +########################%:.+------:::::--=                     ",
+    "                                .--:+-+#####################%=.  ..-=------:::::-==.                 ",
+    "                                   .+@@####################-.       .:=-----:::::::-+:.              ",
+    "                                      :%%############%%-.              .---------------+..           ",
+    "                                      +#######+::..                      ..=-------------=+.         ",
+    "       .-+=================+-.       :########.       .*===++=+++++++====- :+*+-------------==.      ",
+    "       +-                  -=*       -#######=       .#+:               .-%=+=.:=--------------*-.   ",
+    "     .#-                  .+.-=     .########:      .=..%     .          .:%.-#...-=--------------+. ",
+    "    .*.    ::::#%:::::    :=.*-:===  .#######+  ======+ ==   .+#.   .%=    .#-.*.  .:=-===---------- ",
+    "   :%:        .%-         #..#.     +#######-       .*. .+.   .++    .%.    .*=.#-.   .=+========--= ",
+    "  :*.        :%:         -+ .+.     *#######+-       =+  =-.   .#:    =*      =+.==.     :+========= ",
+    " -#.        .%=         .#. #-      #######*..       .%. .%.    .@-   -#.     .-%..*.      .=+====== ",
+    "=+.        ....         -= .@.      ######*.          +-  -+.    ..---:.        .*..#:        :++=== ",
+    "+.                     .#:.+=       +#####-           :*. .*.                    .%:.+=.        .=++ ",
+    ".                     .=+ .*.           ::           ..*.  -=                      *-.=*.          - ",
+  }
+
+  local ascii_art_4 = {
+
+    "                            .-++======*#+#%################################.                         ",
+    "                              .=+++++#*#%##################################%.                        ",
+    "                                .+++#+#%####################################*.                       ",
+    "                                  -#+%#######################################:                       ",
+    "                                 :**%########################################*                       ",
+    "                               .=*#%#########################################%.                      ",
+    "                               :***%##########################################:                      ",
+    "                              .#**+###########################################.                      ",
+    "                              .**+++%########################################=                       ",
+    "                              .*#+++#+-*################################**###.                       ",
+    "                                    .+.  +############################=-::-*-.                       ",
+    "                                     .-.  :##########################-::::::-+=..                    ",
+    "                                      .=   =########################+--:::::::-+=.                   ",
+    "                                        :=.-##########################+-::::::::-+-..                ",
+    "                                          :@@%########################*:=-:::::::::+-.               ",
+    "                                           .:#%####################%+.  .:=---:::::::=-              ",
+    "                                             +##%%%###########**=         .-=--::::::::=-.           ",
+    "                                            :%######=.                      .=--:::::::::=-.         ",
+    "                                           .@######%.                         .=---::::::::==        ",
+    "                                          .+######%:                            .----::::::::=-.     ",
+    "                                          :%######=                               .=--:::::::::=-.   ",
+    "                                         .@#######.                                  =--:::::::::=-. ",
+    "                                        .*######%:.                                   .=--:::::::::= ",
+    "                                        :##**###+                                       .=--:::::::: ",
+    "                                        ########.                                         .=--:::::: ",
+    "                                        :%####%=                                            .+---::- ",
+    "                                                                                             .:+---- ",
+    "        .-+===============+-.  .-+=================+-. .-+=============+-..-+=================:.:=-- ",
+    "       :+                  =.=*-:                   :+#*.               .**.+:               .=*..:+ ",
+    "      .*.                 .* +:#              .      :=%:                .+-.*-                 =+ . ",
+    "     -+.   ::::#*:::::   .#.:+--   ..*#.     =%:     .+.*.   .%.   .**.   .-+.-=       :%-       .+= ",
+    "    .+.      .=#.        :+.#.*       :#*..+#:.      .+.+:   .:*.    *=.    -*.-*.      .*+.       : ",
+    "   :#.       :#.         +.:=:-         .%%.          =*-=    .=%.   .#:     .*..*.      .=%:        ",
+    "  .+.       :@:         .*.=:--         .*+           .@.#.    .=*.   .%.     .#:.#-       .#+       ",
+    " .#.       .-:          *-.+.*.         .*=            ++:*.     .-===-.       .*:.+=       .=*.     ",
+    ".+.                    :%.+::*          .*:             #.+:                    .+:.-+.              ",
+    "#.                    .+:.# +=                        . +---                      ==.-#.             ",
+  }
+
+  local ascii_art_5 = {
+
+    "                                         *%%@+*..*####################################%.               ",
+    "                                              .=..=%##################################=                ",
+    "                                               -:  -############################+:=##=.                ",
+    "                                               .*. .+########################@-:::::*.                 ",
+    "                                                 --.=%#######################--::::::-=.               ",
+    "                                                  .#@@#######################*--:::::::--.             ",
+    "                                                    .*%#######################%+--:::::::=:            ",
+    "                                                    .##%%###################%+..:=-:::::::-+..         ",
+    "                                                   .+######%%%%########%#=-     ..=--:::::::-=.        ",
+    "                                                  .+#######+                       :=--:::::::=-.      ",
+    "                                                 .+#######+.                        .:--::::::::=:.    ",
+    "                                                 =########.                           .---:::::::-=.   ",
+    "                                               .+#######*.                             ..--::::::::-   ",
+    "                                               -########:                                .:=-::::::-   ",
+    "                                              :########.                                    --:::::-   ",
+    "                                              -%######-.                                     .---::-   ",
+    "                                              .######-                                         .--:-   ",
+    "                                                                                                 ---   ",
+    "                                                                                                   =   ",
+    "                                                                                                       ",
+    "                                                                                                       ",
+    "                                                                                                       ",
+    "                                                                                                       ",
+    "                                                                                                       ",
+    "                                                                                                       ",
+    "                                                                                                       ",
+    "                                                                                                       ",
+    "       .=====================   -+ =================+-  -+==============+--  -+===============+-.       ",
+    "       --                  =.-=-:                   .#+%.                :%.-=.               .#=.     ",
+    "      -+.                 .+.*.#..                   .+==                ..@..#.                .#=.   ",
+    "    .=-    :::.%=::::     %.-+=:     -%-    .#*.     .+.*.   .#-    :%.    .+..*.      .*#.       :*   ",
+    "    -=.      .++         -=.#.*.      .=%-:#+.       .+-=-    .#:    -# .   .#-.+-       :%-.      .   ",
+    "  .==       .-*.         +.--:=        ..+#.          :%:#.    .@:   .+#.     +-.+=.      .#*.         ",
+    " .:=       .-@.         .*.=.--          +*           .#===     .%-   .%-     .=*.:+       .-@:        ",
+    ".-+.       .@.         .#-.*.*.          ++.           :*.*.      ..::.         -= :%.      ..=.       ",
+    ":=        ...          :% #.:*.         .=-             *:=-                     :#. *:                ",
+    "*                     .*.:*.+-                          -+.*.                     .*..*=.              ",
+  }
+
+  local ascii_art_6 = {
+
+    "                            .-++======*#+#%################################.                         ",
+    "                              .=+++++#*#%##################################%.                        ",
+    "                                .+++#+#%####################################*.                       ",
+    "                                  -#+%#######################################:                       ",
+    "                                 :**%########################################*                       ",
+    "                               .=*#%#########################################%.                      ",
+    "                               :***%##########################################:                      ",
+    "                              .#**+###########################################.                      ",
+    "                              .**+++%########################################=                       ",
+    "                              .*#+++#+-*################################**###.                       ",
+    "                                    .+.  +############################=-::-*-.                       ",
+    "                                     .-.  :##########################-::::::-+=..                    ",
+    "                                      .=   =########################+--:::::::-+=.                   ",
+    "                                        :=.-##########################+-::::::::-+-..                ",
+    "                                          :@@%########################*:=-:::::::::+-.               ",
+    "                                           .:#%####################%+.  .:=---:::::::=-              ",
+    "                                             +##%%%###########**=         .-=--::::::::=-.           ",
+    "                                            :%######=.                      .=--:::::::::=-.         ",
+    "                                           .@######%.                         .=---::::::::==        ",
+    "                                          .+######%:                            .----::::::::=-.     ",
+    "                                          :%######=                               .=--:::::::::=-.   ",
+    "                                         .@#######.                                  =--:::::::::=-. ",
+    "                                        .*######%:.                                   .=--:::::::::= ",
+    "                                        :##**###+                                       .=--:::::::: ",
+    "                                        ########.                                         .=--:::::: ",
+    "                                        :%####%=                                            .+---::- ",
+    "                                                                                             .:+---- ",
+    "        .-+===============+-.  .-+=================+-. .-+=============+-..-+=================:.:=-- ",
+    "       :+                  =.=*-:                   :+#*.               .**.+:               .=*..:+ ",
+    "      .*.                 .* +:#              .      :=%:                .+-.*-                 =+ . ",
+    "     -+.   ::::#*:::::   .#.:+--   ..*#.     =%:     .+.*.   .%.   .**.   .-+.-=       :%-       .+= ",
+    "    .+.      .=#.        :+.#.*       :#*..+#:.      .+.+:   .:*.    *=.    -*.-*.      .*+.       : ",
+    "   :#.       :#.         +.:=:-         .%%.          =*-=    .=%.   .#:     .*..*.      .=%:        ",
+    "  .+.       :@:         .*.=:--         .*+           .@.#.    .=*.   .%.     .#:.#-       .#+       ",
+    " .#.       .-:          *-.+.*.         .*=            ++:*.     .-===-.       .*:.+=       .=*.     ",
+    ".+.                    :%.+::*          .*:             #.+:                    .+:.-+.              ",
+    "#.                    .+:.# +=                        . +---                      ==.-#.             ",
+  }
+
+  local ascii_art_7 = {
+
+    "                            :#+++++=.                                                                ",
+    "                        .::+++++++++++-.           .                                                  ",
+    "                       .=++++++++++++++-.     .:=*****+.                                             ",
+    "                      =++++++++++++==+=+*=.-#+++##++++*.                                             ",
+    "                    .*+++++=+++========*#*+*#%%%%%##*+*.                                             ",
+    "                  .:*++++=++++++++==+##+*%%############%%*-.                                         ",
+    "                  =++++++++++++++++*#+*%###################%+.                                       ",
+    "                 .*+++++++++++++++%+%%#######################%+.                                     ",
+    "                :*++++++++++++++#*#%############################-                                    ",
+    "               .*++++++++++++++#+#################################.                                  ",
+    "               .+*+++++++++++#**%#################################+                                  ",
+    "                 ..#*++++++*#+#%###################################=                                 ",
+    "                    .=*++++#+#######################################-                                ",
+    "                       .*+%+########################################=.                               ",
+    "                        .++%########################################+.                               ",
+    "                        -++#########################################+.                               ",
+    "                       -*+%##########################################.                               ",
+    "                     ..*+**#####################################**##=.                               ",
+    "                     .-*+++###################################=--::--.                               ",
+    "                      :+*+++@..=#############################+-::::::-=:                             ",
+    "                      .-*+**+-    +##########################--:::::::::--:.                         ",
+    "                             :-.    *##########################=---::::::::-+.                       ",
+    "                              .-.    +########################%:.+------:::::--=                     ",
+    "                                .--:+-+#####################%=.  ..-=------:::::-==.                 ",
+    "                                   .+@@####################-.       .:=-----:::::::-+:.              ",
+    "                                      :%%############%%-.              .---------------+..           ",
+    "                                      +#######+::..                      ..=-------------=+.         ",
+    "       .-+=================+-.       :########.       .*===++=+++++++====- :+*+-------------==.      ",
+    "       +-                  -=*       -#######=       .#+:               .-%=+=.:=--------------*-.   ",
+    "     .#-                  .+.-=     .########:      .=..%     .          .:%.-#...-=--------------+. ",
+    "    .*.    ::::#%:::::    :=.*-:===  .#######+  ======+ ==   .+#.   .%=    .#-.*.  .:=-===---------- ",
+    "   :%:        .%-         #..#.     +#######-       .*. .+.   .++    .%.    .*=.#-.   .=+========--= ",
+    "  :*.        :%:         -+ .+.     *#######+-       =+  =-.   .#:    =*      =+.==.     :+========= ",
+    " -#.        .%=         .#. #-      #######*..       .%. .%.    .@-   -#.     .-%..*.      .=+====== ",
+    "=+.        ....         -= .@.      ######*.          +-  -+.    ..---:.        .*..#:        :++=== ",
+    "+.                     .#:.+=       +#####-           :*. .*.                    .%:.+=.        .=++ ",
+    ".                     .=+ .*.           ::           ..*.  -=                      *-.=*.          - ",
+  }
+
+  -- Obtener las dimensiones de la pantalla
+
+  local width = vim.api.nvim_get_option("columns")
+  local height = vim.api.nvim_get_option("lines")
+
+  -- Calcular la posición para centrar el arte ASCII
+  local win_height = #ascii_art_1
+  local win_width = 120 -- Ajusta según el ancho de tu arte
+  local row = math.ceil((height - win_height) / 2 - 1)
+  local col = math.ceil((width - win_width) / 2)
+
+  -- Configurar la ventana flotante
+  local opts = {
+    style = "minimal",
+    relative = "editor",
+    width = win_width,
+    height = win_height,
+    row = row,
+    col = col,
+    border = "rounded",
+  }
+
+  -- Abrir la ventana flotante
+  local win = vim.api.nvim_open_win(buf, true, opts)
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, ascii_art_1)
+  vim.api.nvim_buf_set_option(buf, "modifiable", false)
+
+  vim.defer_fn(function()
+    vim.api.nvim_buf_set_option(buf, "modifiable", true)
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, ascii_art_2)
+    vim.api.nvim_buf_set_option(buf, "modifiable", false)
+  end, 400) -- 1000 ms = 1 segundo
+
+  vim.defer_fn(function()
+    vim.api.nvim_buf_set_option(buf, "modifiable", true)
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, ascii_art_3)
+    vim.api.nvim_buf_set_option(buf, "modifiable", false)
+  end, 800) -- 2000 ms = 2 segundos
+
+  vim.defer_fn(function()
+    vim.api.nvim_buf_set_option(buf, "modifiable", true)
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, ascii_art_4)
+    vim.api.nvim_buf_set_option(buf, "modifiable", false)
+  end, 1200) -- 2000 ms = 2 segundos
+  vim.defer_fn(function()
+    vim.api.nvim_buf_set_option(buf, "modifiable", true)
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, ascii_art_5)
+    vim.api.nvim_buf_set_option(buf, "modifiable", false)
+  end, 1600) -- 2000 ms = 2 segundos
+  vim.defer_fn(function()
+    vim.api.nvim_buf_set_option(buf, "modifiable", true)
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, ascii_art_6)
+    vim.api.nvim_buf_set_option(buf, "modifiable", false)
+  end, 2000) -- 2000 ms = 2 segundos
+  vim.defer_fn(function()
+    vim.api.nvim_buf_set_option(buf, "modifiable", true)
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, ascii_art_7)
+    vim.api.nvim_buf_set_option(buf, "modifiable", false)
+  end, 2400) -- 2000 ms = 2 segundos
+  vim.defer_fn(function()
+    vim.api.nvim_buf_set_option(buf, "modifiable", true)
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, ascii_art_7)
+    vim.api.nvim_buf_set_option(buf, "modifiable", false)
+  end, 2800) -- 2000 ms = 2 segundos
+  -- Cerrar la ventana automáticamente después de otros 1 segundo (total de 3 segundos)
+  vim.defer_fn(function()
+    vim.api.nvim_win_close(win, true) -- Cerrar la ventana utilizando su identificador
+  end, 3500) -- 3000 ms = 3 segundos
+  -- Cerrar la ventana automáticamente después de otros 1 segundo (total de 3 segundos)
+end
+
+-- Ejecutar la función al iniciar Neovim
+vim.api.nvim_create_autocmd("VimEnter", { callback = show_ascii_art })
+--=================================================================
+
+--
+--     "                                               .=++.                                                                   ",
+--     "                                             =%+===*#.                                                                 ",
+--     "                                           *#========**                                                                ",
+--     "                                         *#============#=    -+***#%@+                                                 ",
+--     "                                       %+===============#@#++##+===+@.                                                 ",
+--     "                                     :*===============**+**-----=#%%@.                                                 ",
+--     "                                    :*==============#*+#=::::::::::::-*+.                                              ",
+--     "                                   .*=============##+#::::::::::::::::::-%.                                            ",
+--     "                                   *============#*+%-:::::::::::::::::::::+#.                                          ",
+--     "                                  #+===========#+#+:::::::::::::::::::::::::%+                                         ",
+--     "                                  #*=========+%*%-:::::::::::::::::::::::::::#-                                        ",
+--     "                                    .#+=====**#=:::::::::::::::::::::::::::::-%                                        ",
+--     "                                      .+*==#+#=:::::::::::::::::::::::::::::::+%                                       ",
+--     "                                         -%+*=:::::::::::::::::::::::::::::::::@:                                      ",
+--     "                                         .*#*::::::::::::::::::::::::::::::::::#-                                      ",
+--     "                                        :#*%:::::::::::::::::::::::::::::::::::%:                                      ",
+--     "                                        ++#%:::::::::::::::::::::::::::::::-=+-%.                                      ",
+--     "                                       .+#++*::::::::::::::::::::::::::::=@*-:=#.                                      ",
+--     "                                       .*@==##-*%-:::::::::::::::::::::::%-::::::+=.                                   ",
+--     "                                        =###+++  =%::::::::::::::::::::::=@-::::::::*-                                 ",
+--     "                                              .*   =#:::::::::::::::::::::-@#=::::::::-*-                              ",
+--     "                                                ==:-=@-::::::::::::::::::#+  .=+:::::::::=+:                           ",
+--     "                                                  *@@@+:::::::::::::::-##.       #-:::::::::*+                         ",
+--     "                                                    ..*@+:::::::::+%#-.            =*:::::::::-*=                      ",
+--     "                                                     .+:-=+#%===-.                   -+=:::::::::=+:                   ",
+--     "                                                     -=::::*.                           *+:::..:::::++.                ",
+--     "                                                    .%:::::*                              :#-::....::::==              ",
+--     "                                                    =-::::=-                                .++::::::....-*=           ",
+--     "                                                    *:::::*.                                   :*-:::.:....*           ",
+--     "                                                   :+::::-#                                       -=::.....#.          ",
+--     "                                                   ==::::#:                                         -*-::.:#:          ",
+--     "                                                   ==::::#                                             +=::#:          ",
+--     "                                                    *+:+*.                                               :*%:          ",
+--     "                                                                                                                       ",
+--     "                                            .*%%%%%%%%%%%%%%%%%+                                                       ",
+--     "                                            +@................%@*                                                      ",
+--     "                                            @%   *+       +:  .@%+                                                     ",
+--     "                                           .@=   .%@+   *@#    @@*                                                     ",
+--     "                                           *@:     .%@%@#      =@%-                                                    ",
+--     "                                           %%        =@        :@@*                                                    ",
+--     "                                          :@*        -@         %@%                                                    ",
+--     "                                          =@=        -@         +@%#                                                   ",
+--     "                                          +@++++++++++*++++++++++@%%.                                                  ",
+--     "                                          .-----------------------.                                                    ",
+--     "                                                                                                                       ",
+
+==> Fin de lua/config/litle-bird-init.lua <==
 
 ----------------------------------------
 
@@ -417,6 +1639,515 @@ lspconfig.vtsls.setup({
 -- Add any additional autocmds here
 
 ==> Fin de lua/config/autocmds.lua <==
+
+----------------------------------------
+
+==> Archivo: lua/config/keymaps.lua <==
+
+-- Keymaps are automatically loaded on the VeryLazy event
+-- Default keymaps that are always set: https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua
+-- Add any additional keymaps here
+local map = vim.keymap.set
+-- En modo visual, cuando presionas `p`, reemplaza sin copiar al registro
+map("v", "p", '"_dP', { noremap = true, silent = true })
+-- map("n", "p", '"_dP', { noremap = true, silent = true })
+-- En modo visual, cuando presionas `x`, elimina sin copiar al registro
+map("v", "x", '"_x', { noremap = true, silent = true })
+map("n", "x", '"_x', { noremap = true, silent = true })
+-- Lo mismo para la tecla Suprimir (Delete) en modo visual
+map("v", "<C-Del>", '"_x', { noremap = true, silent = true })
+map("n", "<C-Del>", '"_x', { noremap = true, silent = true })
+
+-- En modo normal, cuando presionas `ss`, elimina la línea sin copiarla
+map("n", "ss", '"_dd', { noremap = true, silent = true })
+
+-- En modo visual, cuando presionas `ss`, elimina la selección sin copiarla
+map("v", "ss", '"_d', { noremap = true, silent = true })
+
+-- Mapeo para buscar dentro del buffer actual con Telescope current_buffer_fuzzy_find
+map("n", "<leader>fa", ":Telescope current_buffer_fuzzy_find<CR>", { noremap = true, silent = true })
+
+-- Buscar palabra en todo el documento
+map("n", "<leader>fw", ":Telescope live_grep<CR>", { noremap = true, silent = true })
+
+-- Elimina el buffer actual usando Ctrl+w
+map("n", "<C-w>", ":bd<CR>", { noremap = true, silent = true })
+
+-- Cambiar al siguiente buffer con Ctrl + a
+vim.api.nvim_set_keymap("n", "<C-f>", ":bnext<CR>", { noremap = true, silent = true })
+
+-- Cambiar al buffer anterior con Ctrl + s
+vim.api.nvim_set_keymap("n", "<C-a>", ":bprev<CR>", { noremap = true, silent = true })
+
+-- Mover línea hacia abajo con atrl+upo down
+map("n", "<A-Up>", ":m-2<CR>", { noremap = true, silent = true, desc = "Move line up" })
+map("n", "<A-Down>", ":m+<CR>", { noremap = true, silent = true, desc = "Move line down" })
+
+-- Mover líneas hacia arriba en modo visual con Alt + Up
+map("x", "<A-Up>", ":move '<-2<CR>gv-gv", { noremap = true, silent = true, desc = "Move lines up" })
+-- Mover líneas hacia abajo en modo visual con Alt + Down
+map("x", "<A-Down>", ":move '>+1<CR>gv-gv", { noremap = true, silent = true, desc = "Move lines down" })
+
+-- Función para generar un console.log con la palabra bajo el cursor
+local function insert_console_log()
+  local word = vim.fn.expand("<cword>")
+  local log_entry = string.format('console.log("%s====>", %s)', word, word)
+  vim.api.nvim_put({ log_entry }, "l", true, true) -- Inserta el texto en la línea actual
+end
+-- Mapea Ctrl + l para insertar un console.log con la palabra bajo el cursor
+map("n", "<C-A-l>", insert_console_log, { noremap = true, silent = true })
+
+-- Función para generar un console.log con JSON.stringify
+local function insert_console_logJson()
+  local word = vim.fn.expand("<cword>")
+  local log_entry = string.format("console.log('%s=====>', JSON.stringify(%s, null, 2))", word, word)
+  vim.api.nvim_put({ log_entry }, "l", true, true) -- Inserta el texto en la línea actual
+end
+
+-- Mapea Ctrl + Shift  para insertar un console.log con JSON.stringify
+map("n", "<C-A-k>", insert_console_logJson, { noremap = true, silent = true })
+
+--Mapea para abrir el trouble de errores
+map("n", "<Leader>t", function()
+  vim.cmd("Trouble diagnostics")
+  vim.defer_fn(function()
+    vim.cmd("wincmd j")
+  end, 50) -- Delay of 50 milliseconds
+end, { noremap = true, silent = true, desc = "Show Trouble diagnostics and move to the window" })
+
+-- Mapeo para seleccionar la palabra bajo el cursor y entrar en modo visual
+map("n", "<leader>d", "viw", { noremap = true, silent = true, desc = "Select current word" })
+
+-- Añadir mapeo para búsqueda y reemplazo sensible a mayúsculas/minúsculas
+map("n", "<leader>sx", function()
+  vim.ui.input({ prompt = "Copiar copiar: " }, function(old)
+    if old then
+      vim.ui.input({ prompt = "Pegar pegar: " }, function(new)
+        if new then
+          old = old:gsub("%%", "\\%%"):gsub("%^", "\\^")
+          new = new:gsub("%%", "\\%%")
+          vim.cmd(string.format("%%s/\\C%s/%s/g", old, new))
+          vim.cmd('echom "Copiar copiar completado"')
+          vim.cmd("nohlsearch")
+        end
+      end)
+    end
+  end)
+end, { desc = "Copiar copiar y Pegar pegar", noremap = true, silent = true })
+
+-- Para el modo normal, desmapear Ctrl + flecha arriba y abajo
+map("n", "<C-Up>", "<NOP>", { noremap = true, silent = true })
+map("n", "<C-Down>", "<NOP>", { noremap = true, silent = true })
+
+-- Si también quieres desactivarlo en otros modos como el modo visual
+map("v", "<C-Up>", "<NOP>", { noremap = true, silent = true })
+map("v", "<C-Down>", "<NOP>", { noremap = true, silent = true })
+
+---- Función para abrir terminal en la ubicación del archivo actual
+
+-- Función para abrir terminal en la ubicación del archivo actual
+local function open_terminal_in_file_dir()
+  -- Obtener la ruta absoluta del archivo actual
+  local file_path = vim.fn.expand("%:p")
+
+  -- Si no hay archivo abierto, usar el directorio actual
+  if file_path == "" then
+    vim.notify("No hay archivo abierto, usando directorio actual", vim.log.levels.WARN)
+    return
+  end
+
+  -- Obtener el directorio del archivo
+  local file_dir = vim.fn.fnamemodify(file_path, ":h")
+
+  -- Abrir nueva pestaña con terminal
+  vim.cmd("tabnew")
+
+  -- Cambiar al directorio del archivo
+  vim.cmd("lcd " .. vim.fn.fnameescape(file_dir))
+
+  -- Abrir terminal
+  vim.cmd("terminal")
+
+  -- Mostrar mensaje con la ruta actual
+  vim.notify("Terminal abierta en: " .. file_dir, vim.log.levels.INFO)
+end
+
+-- Mapear <leader>tt para abrir terminal en la ubicación del archivo
+vim.keymap.set("n", "<leader>bu", open_terminal_in_file_dir, {
+  noremap = true,
+  silent = true,
+  desc = "Open terminal in current file's directory",
+})
+
+-- local map = vim.keymap.set
+
+map("n", "<leader>rp", require("config.transparent").toggle_transparency, {
+  desc = "transparent",
+  noremap = true,
+  silent = true,
+})
+
+vim.keymap.set("n", "<leader>ri", _G.gather_file_contents_smart, {
+  noremap = true,
+  silent = true,
+  desc = "Smart file content gatherer (Node.js/Python)",
+})
+
+==> Fin de lua/config/keymaps.lua <==
+
+----------------------------------------
+
+==> Archivo: lua/config/colors.lua <==
+
+-- colors.lua: Personalización de colores
+
+-- Cambiar el color de los tipos de datos (tipados) con subrayado
+vim.cmd([[highlight Type  gui=underline]])
+
+-- Cambiar el color de los comentarios
+vim.cmd([[highlight Comment guifg=#6272a4]])
+
+-- -- Cambiar el color de las funciones en negrita
+-- vim.cmd([[highlight Function guifg=#8be9fd gui=bold]])
+--
+-- -- Cambiar el color del fondo en los números de línea
+-- vim.cmd([[highlight LineNr guifg=#5eacd3 guibg=NONE]])
+--
+-- -- Cambiar el color de los números de línea actuales
+-- vim.cmd([[highlight CursorLineNr guifg=#ffb86c guibg=NONE gui=bold]])
+--
+-- -- Cambiar el color de las cadenas de texto (strings)
+-- vim.cmd([[highlight String guifg=#f1fa8c]])
+--
+-- -- Cambiar el color de las constantes (por ejemplo, números)
+-- vim.cmd([[highlight Constant guifg=#bd93f9]])
+--
+-- -- Cambiar el color de las variables globales
+-- vim.cmd([[highlight Identifier guifg=#50fa7b]])
+
+-- Puedes agregar más personalizaciones según tus preferencias...
+--
+--
+--
+-- Fondo claro para el área de código (Normal)
+-- vim.cmd([[highlight Normal guibg=#a8dadc]]) -- Un azul claro, puedes ajustar el color si lo prefieres
+--
+-- -- Fondo oscuro para las ventanas emergentes (menús, buscadores, etc.)
+-- vim.cmd([[highlight Pmenu guibg=#1d3557]]) -- Fondo del menú (Pmenu)
+-- vim.cmd([[highlight PmenuSel guibg=#457b9d]]) -- Fondo cuando seleccionas un elemento en el menú
+-- vim.cmd([[highlight TelescopeNormal guibg=#1d3557]]) -- Fondo del buscador (Telescope)
+-- vim.cmd([[highlight TelescopeBorder guifg=#1d3557 guibg=#1d3557]]) -- Borde del buscador (Telescope)
+--
+-- -- Fondo oscuro para NvimTree (igual que Telescope)
+-- vim.cmd([[highlight NvimTreeNormal guibg=#1d3557]])
+-- vim.cmd([[highlight NvimTreeNormalNC guibg=#1d3557]])
+--
+--
+--
+--
+--
+-- -- -- Cambiar el color de los tipos de datos (por ejemplo, int, float, etc.) con subrayado
+-- vim.cmd([[highlight Type gui=underline]])
+--
+-- -- Cambiar el color de los comentarios
+-- vim.cmd([[highlight Comment guifg=#6272a4]])
+--
+-- -- Cambiar el color de las funciones en negrita
+-- vim.cmd([[highlight Function guifg=#8be9fd gui=bold]])
+--
+-- -- Cambiar el color del fondo en los números de línea
+-- vim.cmd([[highlight LineNr guifg=#5eacd3 guibg=NONE]])
+--
+-- -- Cambiar el color de los números de línea actuales
+-- vim.cmd([[highlight CursorLineNr guifg=#ffb86c guibg=NONE gui=bold]])
+--
+-- -- Cambiar el color de las cadenas de texto (strings)
+-- vim.cmd([[highlight String guifg=#f1fa8c]])
+--
+-- -- Cambiar el color de las constantes (por ejemplo, números)
+-- vim.cmd([[highlight Constant guifg=#bd93f9]])
+--
+-- -- Cambiar el color de las variables globales
+-- vim.cmd([[highlight Identifier guifg=#50fa7b]])
+--
+-- -- Cambiar el color de las palabras clave (keywords, como "if", "else", "return")
+-- vim.cmd([[highlight Keyword guifg=#ff79c6 gui=bold]])
+--
+-- -- Cambiar el color de las declaraciones (por ejemplo, funciones, variables)
+-- vim.cmd([[highlight Statement guifg=#ff79c6]])
+--
+-- -- Cambiar el color de los delimitadores (paréntesis, llaves, corchetes)
+-- vim.cmd([[highlight Delimiter guifg=#ffb86c]])
+--
+-- -- Cambiar el color de los operadores (por ejemplo, "+", "=", "&&")
+-- vim.cmd([[highlight Operator guifg=#ff79c6]])
+--
+-- -- Cambiar el color de los bloques condicionales (if, else, while)
+-- vim.cmd([[highlight Conditional guifg=#ff79c6]])
+--
+-- -- Cambiar el color de los bloques repetitivos (for, while)
+-- vim.cmd([[highlight Repeat guifg=#bd93f9]])
+--
+-- -- Cambiar el color de los identificadores de preprocesador (por ejemplo, #define)
+-- vim.cmd([[highlight PreProc guifg=#ff79c6]])
+--
+-- -- Cambiar el color de las excepciones (try, catch, throw)
+-- vim.cmd([[highlight Exception guifg=#ff5555]])
+--
+-- -- Cambiar el color de las etiquetas y directivas (goto, labels)
+-- vim.cmd([[highlight Label guifg=#bd93f9]])
+--
+-- -- Cambiar el color de las macros (por ejemplo, #define en C)
+-- vim.cmd([[highlight Macro guifg=#ff79c6]])
+--
+-- -- Cambiar el color de las constantes booleanas (true, false)
+-- vim.cmd([[highlight Boolean guifg=#ffb86c gui=bold]])
+--
+-- -- Cambiar el color de las constantes numéricas (números)
+-- vim.cmd([[highlight Number guifg=#bd93f9]])
+--
+-- -- Cambiar el color de las constantes flotantes (por ejemplo, 3.14)
+-- vim.cmd([[highlight Float guifg=#bd93f9]])
+--
+-- -- Cambiar el color de los strings en comillas simples o dobles
+-- vim.cmd([[highlight String guifg=#f1fa8c]])
+--
+-- -- Cambiar el color de los comentarios TODO
+-- vim.cmd([[highlight Todo guifg=#ffb86c gui=bold]])
+--
+-- -- Cambiar el color del fondo cuando la línea actual está resaltada
+-- vim.cmd([[highlight CursorLine guibg=#2d2a2e]])
+--
+-- -- Cambiar el color de las líneas coincidentes en la búsqueda
+-- vim.cmd([[highlight Search guibg=#ffb86c guifg=#282a36]])
+--
+-- -- Cambiar el color del fondo en las ventanas emergentes (por ejemplo, autocompletar)
+-- vim.cmd([[highlight Pmenu guibg=#1d3557 guifg=#ffffff]])
+--
+-- -- Cambiar el color de los elementos seleccionados en el menú emergente
+-- vim.cmd([[highlight PmenuSel guibg=#457b9d guifg=#ffffff]])
+--
+-- -- Cambiar el color de los bordes de las ventanas emergentes (Telescope, menús)
+-- vim.cmd([[highlight PmenuBorder guifg=#1d3557]])
+--
+-- -- Cambiar el color de las coincidencias de búsqueda (highlight search)
+-- vim.cmd([[highlight IncSearch guibg=#ff79c6 guifg=#ffffff]])
+--
+-- -- Cambiar el color del texto seleccionado visualmente
+-- vim.cmd([[highlight Visual guibg=#44475a]])
+--
+-- -- Cambiar el color de las líneas resaltadas en errores (LSP)
+-- vim.cmd([[highlight LspDiagnosticsDefaultError guifg=#ff5555]])
+--
+-- -- Cambiar el color de las advertencias del LSP
+-- vim.cmd([[highlight LspDiagnosticsDefaultWarning guifg=#f1fa8c]])
+--
+-- -- Cambiar el color de la información (Info) del LSP
+-- vim.cmd([[highlight LspDiagnosticsDefaultInformation guifg=#8be9fd]])
+--
+-- -- Cambiar el color de las sugerencias del LSP
+-- vim.cmd([[highlight LspDiagnosticsDefaultHint guifg=#50fa7b]])
+--
+-- -- Cambiar el color de los errores sintácticos (underline)
+-- vim.cmd([[highlight DiagnosticUnderlineError guifg=NONE gui=underline]])
+--
+-- -- Cambiar el color de las advertencias sintácticas (underline)
+-- vim.cmd([[highlight DiagnosticUnderlineWarn guifg=NONE gui=underline]])
+--
+-- -- Cambiar el color del número de líneas de relleno (después del final del archivo)
+-- vim.cmd([[highlight EndOfBuffer guifg=#44475a]])
+--
+-- -- Cambiar el color de los títulos de los plugins (como Telescope)
+-- vim.cmd([[highlight Title guifg=#50fa7b gui=bold]])
+--
+-- -- Cambiar el color del texto que indica progreso (porcentaje de archivo, línea actual)
+-- vim.cmd([[highlight StatusLine guifg=#ffffff guibg=#282a36]])
+--
+-- -- Cambiar el color de los bordes de los paneles (split borders)
+-- vim.cmd([[highlight VertSplit guifg=#6272a4]])
+--
+-- -- Cambiar el color del espacio vacío al final de las líneas
+-- vim.cmd([[highlight Whitespace guifg=#6272a4]])
+--
+
+-- Función para aplicar personalizaciones de colores
+local function apply_custom_colors()
+  -- Esperar un poco para asegurar que el tema se ha cargado completamente
+  vim.defer_fn(function()
+    -- Cambiar el color de los tipos de datos (tipados) con subrayado
+    vim.cmd([[highlight Type gui=underline]])
+
+    -- Cambiar el color de los comentarios
+    vim.cmd([[highlight Comment guifg=#6272a4]])
+
+    -- Configuraciones específicas para NeoTree (refuerzo de las configuraciones del tema)
+    vim.api.nvim_set_hl(0, "NeoTreeNormal", { bg = "#111111" })
+    vim.api.nvim_set_hl(0, "NeoTreeEndOfBuffer", { bg = "#111111" })
+    vim.api.nvim_set_hl(0, "NeoTreeVertSplit", { bg = "#111111" })
+    vim.api.nvim_set_hl(0, "NeoTreeWinSeparator", { fg = "#111111", bg = "#111111" })
+    vim.api.nvim_set_hl(0, "NeoTreeBorder", { fg = "#111111", bg = "#111111" })
+
+    -- Asegurar que el fondo del área de código sea consistente (solo si no hay transparencia)
+    local transparent_status = false
+    local ok, transparent_module = pcall(require, "config.transparent")
+    if ok then
+      transparent_status = transparent_module.get_status()
+    end
+
+    if not transparent_status then
+      -- Solo aplicar fondos si no hay transparencia activa
+      vim.cmd([[highlight Normal guibg=#191919]])
+      vim.cmd([[highlight NormalNC guibg=#191919]])
+    end
+
+    -- Otras personalizaciones que puedas necesitar...
+    -- vim.cmd([[highlight Function guifg=#8be9fd gui=bold]])
+    -- vim.cmd([[highlight String guifg=#f1fa8c]])
+    -- etc...
+  end, 100)
+end
+
+-- Aplicar colores inmediatamente
+apply_custom_colors()
+
+-- Autocomando para aplicar colores personalizados cuando se abre NeoTree
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = "neo-tree",
+  callback = function()
+    vim.api.nvim_set_hl(0, "NeoTreeNormal", { bg = "#111111" })
+    vim.api.nvim_set_hl(0, "NeoTreeEndOfBuffer", { bg = "#111111" })
+    vim.api.nvim_set_hl(0, "NeoTreeVertSplit", { bg = "#111111" })
+    vim.api.nvim_set_hl(0, "NeoTreeWinSeparator", { fg = "#111111", bg = "#111111" })
+    vim.api.nvim_set_hl(0, "NeoTreeBorder", { fg = "#111111", bg = "#111111" })
+  end,
+})
+
+-- También aplicar cuando se cambie el colorscheme
+vim.api.nvim_create_autocmd("ColorScheme", {
+  pattern = "*",
+  callback = apply_custom_colors,
+})
+
+-- Aplicar cuando se carga el buffer (para mantener consistencia)
+vim.api.nvim_create_autocmd("BufEnter", {
+  pattern = "*",
+  callback = function()
+    -- Solo re-aplicar si no hay transparencia
+    local transparent_status = false
+    local ok, transparent_module = pcall(require, "config.transparent")
+    if ok then
+      transparent_status = transparent_module.get_status()
+    end
+
+    if not transparent_status then
+      vim.defer_fn(function()
+        vim.cmd([[highlight Normal guibg=#191919]])
+        vim.cmd([[highlight NormalNC guibg=#191919]])
+      end, 10)
+    end
+  end,
+})
+
+-- Autocomando adicional para cuando se abren/cierran ventanas de NeoTree
+vim.api.nvim_create_autocmd({ "WinEnter", "BufWinEnter" }, {
+  pattern = "*",
+  callback = function()
+    local filetype = vim.bo.filetype
+    if filetype == "neo-tree" then
+      vim.defer_fn(function()
+        vim.api.nvim_set_hl(0, "NeoTreeNormal", { bg = "#111111" })
+        vim.api.nvim_set_hl(0, "NeoTreeEndOfBuffer", { bg = "#111111" })
+        vim.api.nvim_set_hl(0, "NeoTreeVertSplit", { bg = "#111111" })
+      end, 10)
+    end
+  end,
+})
+
+==> Fin de lua/config/colors.lua <==
+
+----------------------------------------
+
+==> Archivo: lua/config/lualine.lua <==
+
+require("lualine").setup({
+  options = {
+    theme = "auto", -- Usar el tema actual
+    component_separators = { left = "", right = "" },
+    section_separators = { left = "", right = "" },
+    disabled_filetypes = {},
+  },
+  sections = {
+    lualine_a = { "mode" },
+    lualine_b = {
+      "branch", -- Muestra la rama de git
+      "diff", -- Muestra los cambios (git diff)
+      "diagnostics", -- Muestra los diagnósticos (LSP)
+    },
+    lualine_c = { "filename" },
+    lualine_x = {
+      "encoding", -- Muestra la codificación del archivo (por ejemplo, UTF-8)
+      "fileformat", -- Muestra el formato del archivo (por ejemplo, Unix)
+      "filetype", -- Muestra el tipo de archivo (con ícono)
+      {
+        -- Mostrar el porcentaje de progreso en el archivo
+        function()
+          local current_line = vim.fn.line(".")
+          local total_lines = vim.fn.line("$")
+          local percent = math.floor((current_line / total_lines) * 100)
+          return string.format("%3d", percent) .. "%%" -- Asegurar un ancho fijo para el porcentaje
+        end,
+        color = { fg = "#ffffff", gui = "bold" }, -- Personaliza el color del porcentaje
+        padding = { left = 2, right = 2 }, -- Espacio antes y después del porcentaje
+      },
+      {
+        -- Mostrar el nombre de la última carpeta con lógica condicional y fondo personalizado
+        function()
+          local cwd = vim.fn.fnamemodify(vim.fn.getcwd(), ":t")
+          if cwd == "zEMVThreeServiceContextV4" then
+            return "Back"
+          elseif cwd == "zEMVThreeClientStandaloneV6" then
+            return "Front"
+          else
+            return cwd
+          end
+        end,
+        color = function()
+          local cwd = vim.fn.fnamemodify(vim.fn.getcwd(), ":t")
+          if cwd == "zEMVThreeServiceContextV4" then
+            return { fg = "#33c3ff", bg = "#3f3f3f", gui = "bold" } -- Color para "Front" con fondo gris oscuro
+          elseif cwd == "zEMVThreeClientStandaloneV6" then
+            return { fg = "#ff5733", bg = "#3f3f3f", gui = "bold" } -- Color para "Back" con fondo gris oscuro
+          else
+            return { fg = "#ffffff", bg = "#3f3f3f", gui = "bold" } -- Color por defecto con fondo gris medio
+          end
+        end,
+        padding = { left = 2, right = 2 }, -- Espacio antes del nombre de la carpeta
+      },
+    },
+    lualine_y = {},
+    lualine_z = {
+      {
+        -- Mostrar la hora actual en la esquina derecha
+        'os.date("%H:%M")',
+        color = { fg = "#ffffff", bg = "#000000" }, -- Fondo negro para la hora
+        icon = "🕒",
+        padding = { left = 2, right = 2 }, -- Espacio alrededor de la hora
+      },
+    },
+  },
+  inactive_sections = {
+    lualine_a = {},
+    lualine_b = {},
+    lualine_c = { "filename" },
+    lualine_x = { "location" },
+    lualine_y = {},
+    lualine_z = {},
+  },
+  tabline = {},
+  extensions = {},
+})
+
+==> Fin de lua/config/lualine.lua <==
 
 ----------------------------------------
 

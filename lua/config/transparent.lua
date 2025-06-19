@@ -1,13 +1,50 @@
--- config/transparent.lua
+-- lua/config/transparent.lua
 local M = {}
 local is_transparent = false -- Inicia sin transparencia
+
+-- Función para guardar los colores originales del tema
+local function save_original_colors()
+  M.original_colors = {
+    Normal = vim.api.nvim_get_hl(0, { name = "Normal" }),
+    NormalNC = vim.api.nvim_get_hl(0, { name = "NormalNC" }),
+    EndOfBuffer = vim.api.nvim_get_hl(0, { name = "EndOfBuffer" }),
+    VertSplit = vim.api.nvim_get_hl(0, { name = "VertSplit" }),
+    SignColumn = vim.api.nvim_get_hl(0, { name = "SignColumn" }),
+    LineNr = vim.api.nvim_get_hl(0, { name = "LineNr" }),
+    CursorLineNr = vim.api.nvim_get_hl(0, { name = "CursorLineNr" }),
+    StatusLine = vim.api.nvim_get_hl(0, { name = "StatusLine" }),
+    StatusLineNC = vim.api.nvim_get_hl(0, { name = "StatusLineNC" }),
+    NeoTreeNormal = vim.api.nvim_get_hl(0, { name = "NeoTreeNormal" }),
+    NeoTreeNormalNC = vim.api.nvim_get_hl(0, { name = "NeoTreeNormalNC" }),
+  }
+end
 
 function M.toggle_transparency()
   if is_transparent then
     -- QUITAR transparencia (restaurar fondo)
-    -- Necesitas restaurar los colores del tema
-    vim.cmd("colorscheme tokyonight") -- Recarga el tema completo
+    -- Primero recarga el tema completo
+    vim.cmd("colorscheme tokyonight")
+
+    -- Luego restaura las personalizaciones de colores
+    vim.schedule(function()
+      -- Recargar las personalizaciones de colores
+      require("config.colors")
+
+      -- Restaurar configuraciones específicas de tu tema personalizado
+      vim.cmd([[highlight Normal guibg=#191919]])
+      vim.cmd([[highlight NormalNC guibg=#191919]])
+
+      -- Restaurar colores de NeoTree
+      vim.api.nvim_set_hl(0, "NeoTreeNormal", { bg = "#111111" })
+      vim.api.nvim_set_hl(0, "NeoTreeEndOfBuffer", { bg = "#111111" })
+      vim.api.nvim_set_hl(0, "NeoTreeVertSplit", { bg = "#111111" })
+    end)
+
+    vim.notify("Transparencia desactivada", vim.log.levels.INFO)
   else
+    -- Guardar colores originales antes de aplicar transparencia
+    save_original_colors()
+
     -- ACTIVAR transparencia
     vim.cmd("highlight Normal guibg=NONE ctermbg=NONE")
     vim.cmd("highlight NormalNC guibg=NONE ctermbg=NONE")
@@ -18,11 +55,30 @@ function M.toggle_transparency()
     vim.cmd("highlight CursorLineNr guibg=NONE ctermbg=NONE")
     vim.cmd("highlight StatusLine guibg=NONE ctermbg=NONE")
     vim.cmd("highlight StatusLineNC guibg=NONE ctermbg=NONE")
+
+    -- Decidir qué hacer con NeoTree:
+    -- Opción 1: Mantener el fondo de NeoTree (recomendado para mejor UX)
+    -- vim.api.nvim_set_hl(0, "NeoTreeNormal", { bg = "#111111" })
+    -- vim.api.nvim_set_hl(0, "NeoTreeNormalNC", { bg = "#111111" })
+
+    -- Opción 2: También hacer NeoTree transparente
+    vim.cmd("highlight NeoTreeNormal guibg=NONE ctermbg=NONE")
+    vim.cmd("highlight NeoTreeNormalNC guibg=NONE ctermbg=NONE")
+    vim.cmd("highlight NeoTreeEndOfBuffer guibg=NONE ctermbg=NONE")
+    vim.cmd("highlight NeoTreeVertSplit guibg=NONE ctermbg=NONE")
+
+    vim.notify("Transparencia activada", vim.log.levels.INFO)
   end
   is_transparent = not is_transparent
 end
 
--- No necesitas init_transparency si quieres empezar sin transparencia
+-- Función para inicializar transparencia si se desea al inicio
+function M.init_transparency()
+  if is_transparent then
+    M.toggle_transparency()
+  end
+end
+
 function M.get_status()
   return is_transparent
 end
