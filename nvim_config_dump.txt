@@ -1,5 +1,5 @@
 === Configuración de Neovim en NixOS ===
-Fecha: jue 19 jun 2025 00:53:19 -04
+Fecha: sáb 21 jun 2025 10:21:46 -04
 Ruta: /home/dasdasd/.config/nvim
 ===============================
 
@@ -742,6 +742,27 @@ return {
 
 ==> Archivo: lua/plugins/neo-tree.lua <==
 
+--
+-- return {
+--   "nvim-neo-tree/neo-tree.nvim",
+--   opts = {
+--     filesystem = {
+--       filtered_items = {
+--         visible = true,
+--         show_hidden_count = true,
+--         hide_dotfiles = false,
+--         hide_gitignored = true,
+--         hide_by_name = {
+--           -- '.git',
+--           -- '.DS_Store',
+--           -- 'thumbs.db',
+--         },
+--         never_show = {},
+--       },
+--     },
+--   },
+-- }
+--
 return {
   "nvim-neo-tree/neo-tree.nvim",
   opts = {
@@ -759,6 +780,32 @@ return {
         never_show = {},
       },
     },
+    -- Configuración de íconos de git (deshabilitados)
+    default_component_configs = {
+      git_status = {
+        symbols = {
+          added = "",
+          modified = "",
+          deleted = "",
+          renamed = "",
+          untracked = "",
+          ignored = "",
+          unstaged = "",
+          staged = "",
+          conflict = "",
+        },
+      },
+    },
+    -- Alternativamente, si quieres deshabilitar completamente los íconos de git:
+    -- window = {
+    --   mappings = {
+    --     ["<space>"] = "none",
+    --   },
+    -- },
+    -- source_selector = {
+    --   winbar = false,
+    --   statusline = false,
+    -- },
   },
 }
 
@@ -897,6 +944,70 @@ return {
 }
 
 ==> Fin de lua/plugins/scrollview.lua <==
+
+----------------------------------------
+
+==> Archivo: lua/plugins/dashboard.lua <==
+
+-- ~/.config/nvim/lua/plugins/dashboard-owl.lua
+return {
+  -- Desactivar mini.starter de LazyVim
+  {
+    "echasnovski/mini.starter",
+    enabled = false,
+  },
+
+  {
+    "folke/snacks.nvim",
+    priority = 1000,
+    lazy = false,
+    opts = {
+      -- Solo el dashboard
+      bigfile = { enabled = false },
+      notifier = { enabled = false },
+      quickfile = { enabled = false },
+      statuscolumn = { enabled = false },
+      words = { enabled = false },
+
+      dashboard = {
+        enabled = true,
+        sections = {
+          { section = "header" },
+          { icon = " ", title = "Keymaps", section = "keys", indent = 2, padding = 1 },
+          { icon = " ", title = "Recent Files", section = "recent_files", indent = 2, padding = 1 },
+          { icon = " ", title = "Projects", section = "projects", indent = 2, padding = 1 },
+          { section = "startup" },
+        },
+        preset = {
+          header = [[
+     █████                       █████                       █████
+    ░░███                       ░░███                       ░░███ 
+  ███████   ██████    █████   ███████   ██████    █████   ███████ 
+ ███░░███  ░░░░░███  ███░░   ███░░███  ░░░░░███  ███░░   ███░░███ 
+░███ ░███   ███████ ░░█████ ░███ ░███   ███████ ░░█████ ░███ ░███ 
+░███ ░███  ███░░███  ░░░░███░███ ░███  ███░░███  ░░░░███░███ ░███ 
+░░████████░░████████ ██████ ░░████████░░████████ ██████ ░░████████
+ ░░░░░░░░  ░░░░░░░░ ░░░░░░   ░░░░░░░░  ░░░░░░░░ ░░░░░░   ░░░░░░░░ 
+          ]],
+          -- ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+          -- █                             📁                                   █
+          -- ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+          keys = {
+            { icon = "📁", key = "f", desc = "Find File", action = ":lua Snacks.dashboard.pick('files')" },
+            { icon = "📄", key = "n", desc = "New File", action = ":ene | startinsert" },
+            { icon = "🔍", key = "g", desc = "Find Text", action = ":lua Snacks.dashboard.pick('live_grep')" },
+            { icon = "📝", key = "r", desc = "Recent Files", action = ":lua Snacks.dashboard.pick('oldfiles')" },
+            { icon = "💾", key = "s", desc = "Restore Session", section = "session" },
+            { icon = "⚙️", key = "l", desc = "Lazy", action = ":Lazy" },
+            { icon = "❌", key = "q", desc = "Quit", action = ":qa" },
+          },
+        },
+      },
+    },
+  },
+}
+
+==> Fin de lua/plugins/dashboard.lua <==
 
 ----------------------------------------
 
@@ -1718,26 +1829,21 @@ function M.show_color_menu()
     end,
   }, function(choice, idx)
     if choice and idx then
-      -- CORREGIDO: Usar directamente el índice que nos da vim.ui.select
       M.set_color_scheme(idx)
     end
   end)
 end
 
--- Función de inicialización
 function M.init()
-  -- Aplicar el primer esquema al inicio
   local initial_scheme = M.color_schemes[M.current_scheme_index]
   M.apply_color_scheme(initial_scheme)
 
-  -- Crear autocomandos para mantener los colores
   local augroup = vim.api.nvim_create_augroup("FolderColors", { clear = true })
 
   vim.api.nvim_create_autocmd("FileType", {
     pattern = "neo-tree",
     callback = function()
       vim.defer_fn(function()
-        -- CORREGIDO: Usar directamente el índice actual
         local current_scheme = M.color_schemes[M.current_scheme_index]
         M.apply_color_scheme(current_scheme)
       end, 100)
@@ -1745,14 +1851,12 @@ function M.init()
     group = augroup,
   })
 
-  -- Mantener colores cuando se abre/entra a ventanas
   vim.api.nvim_create_autocmd({ "WinEnter", "BufWinEnter" }, {
     pattern = "*",
     callback = function()
       local filetype = vim.bo.filetype
       if filetype == "neo-tree" then
         vim.defer_fn(function()
-          -- CORREGIDO: Usar directamente el índice actual
           local current_scheme = M.color_schemes[M.current_scheme_index]
           M.apply_color_scheme(current_scheme)
         end, 50)
@@ -1762,7 +1866,6 @@ function M.init()
   })
 end
 
--- Función para obtener el esquema actual (CORREGIDA)
 function M.get_current_scheme()
   return M.color_schemes[M.current_scheme_index]
 end
@@ -1960,7 +2063,257 @@ map("n", "<leader>ry", _G.show_little_bird, {
   desc = "Show little bird animation",
 })
 
+-- Agregar estas líneas al final de tu lua/config/keymaps.lua
+
+-- =============================================================================
+-- TERMINAL FLOTANTE PERSONALIZADA
+-- =============================================================================
+
+-- Mapeo principal para abrir/cerrar terminal
+map("n", "<leader>rt", function()
+  require("config.terminal").toggle_terminal()
+end, { noremap = true, silent = true, desc = "Toggle Terminal" })
+
+-- Atajo rápido alternativo
+map("n", "<F11>", function()
+  require("config.terminal").toggle_terminal()
+end, { noremap = true, silent = true, desc = "Toggle Terminal" })
+
 ==> Fin de lua/config/keymaps.lua <==
+
+----------------------------------------
+
+==> Archivo: lua/config/terminal.lua <==
+
+-- lua/config/terminal.lua
+local M = {}
+
+-- Variable para trackear la ventana del terminal
+local terminal_win = nil
+local terminal_buf = nil
+
+function M.toggle_terminal()
+  -- Si la ventana existe y está abierta, cerrarla
+  if terminal_win and vim.api.nvim_win_is_valid(terminal_win) then
+    vim.api.nvim_win_close(terminal_win, false)
+    terminal_win = nil
+    return
+  end
+
+  -- Calcular dimensiones (85% ancho, 75% alto para más espacio)
+  local width = math.floor(vim.o.columns * 0.85)
+  local height = math.floor(vim.o.lines * 0.75)
+  local row = math.floor((vim.o.lines - height) / 2)
+  local col = math.floor((vim.o.columns - width) / 2)
+
+  -- Crear buffer si no existe o si fue eliminado
+  if not terminal_buf or not vim.api.nvim_buf_is_valid(terminal_buf) then
+    terminal_buf = vim.api.nvim_create_buf(false, true)
+
+    -- Configurar el buffer del terminal
+    vim.api.nvim_buf_set_option(terminal_buf, "bufhidden", "hide")
+    vim.api.nvim_buf_set_option(terminal_buf, "buflisted", false)
+  end
+
+  -- Obtener información del sistema para el header
+  local username = vim.fn.expand("$USER") or "user"
+  local hostname = vim.fn.hostname() or "localhost"
+  local cwd = vim.fn.fnamemodify(vim.fn.getcwd(), ":t")
+  local time = os.date("%H:%M")
+  local date = os.date("%d/%m/%Y")
+
+  -- Crear título dinámico súper estilizado
+  local title = string.format(" 🚀 %s@%s | %s | %s ", username, hostname, cwd, time)
+
+  -- Crear ventana flotante súper bonita
+  terminal_win = vim.api.nvim_open_win(terminal_buf, true, {
+    relative = "editor",
+    width = width,
+    height = height,
+    row = row,
+    col = col,
+    style = "minimal",
+    border = { "╭", "─", "╮", "│", "╯", "─", "╰", "│" }, -- Bordes súper bonitos
+    title = title,
+    title_pos = "center",
+    footer = string.format(" 💻 Terminal | ESC: Navigate | ESC ESC: Close | %s ", date),
+    footer_pos = "center",
+  })
+
+  -- Aplicar highlights súper estilizados
+  M.setup_terminal_highlights()
+
+  -- Variable para trackear si es un terminal nuevo
+  local is_new_terminal = false
+
+  -- Si es un buffer nuevo o vacío, iniciar terminal
+  if
+    vim.api.nvim_buf_line_count(terminal_buf) <= 1
+    and vim.api.nvim_buf_get_lines(terminal_buf, 0, -1, false)[1] == ""
+  then
+    is_new_terminal = true
+
+    -- ALTERNATIVA: Ejecutar neofetch directamente en el inicio del shell
+    local shell_cmd = vim.o.shell
+    if vim.o.shell:match("fish") then
+      -- Para fish shell
+      shell_cmd = { vim.o.shell, "-c", "neofetch; exec " .. vim.o.shell }
+    elseif vim.o.shell:match("zsh") then
+      -- Para zsh
+      shell_cmd = { vim.o.shell, "-c", "neofetch; exec zsh" }
+    elseif vim.o.shell:match("bash") then
+      -- Para bash
+      shell_cmd = { vim.o.shell, "-c", "neofetch; exec bash" }
+    else
+      -- Fallback genérico
+      shell_cmd = { vim.o.shell, "-c", "neofetch 2>/dev/null || echo 'neofetch no encontrado'; exec " .. vim.o.shell }
+    end
+
+    vim.fn.termopen(shell_cmd, {
+      on_exit = function()
+        -- Cuando el terminal se cierra, limpiar variables
+        if terminal_win and vim.api.nvim_win_is_valid(terminal_win) then
+          vim.api.nvim_win_close(terminal_win, false)
+        end
+        terminal_win = nil
+        terminal_buf = nil
+      end,
+    })
+  end
+
+  -- Configurar mapeos específicos para este terminal
+  M.setup_terminal_keymaps()
+
+  -- Entrar en modo terminal automáticamente
+  vim.cmd("startinsert")
+end
+
+function M.setup_terminal_keymaps()
+  if not terminal_buf then
+    return
+  end
+
+  -- Mapeos para cuando estás en modo terminal (escribiendo)
+  vim.keymap.set("t", "<Esc><Esc>", function()
+    if terminal_win and vim.api.nvim_win_is_valid(terminal_win) then
+      vim.api.nvim_win_close(terminal_win, false)
+      terminal_win = nil
+    end
+  end, { buffer = terminal_buf, desc = "Close terminal" })
+
+  -- Solo salir del modo terminal con Esc (para navegar)
+  vim.keymap.set("t", "<Esc>", "<C-\\><C-n>", { buffer = terminal_buf, desc = "Exit terminal mode" })
+
+  -- F12 también cierra
+  vim.keymap.set({ "t", "n" }, "<F12>", function()
+    if terminal_win and vim.api.nvim_win_is_valid(terminal_win) then
+      vim.api.nvim_win_close(terminal_win, false)
+      terminal_win = nil
+    end
+  end, { buffer = terminal_buf, desc = "Close terminal" })
+
+  -- Mapeos para cuando estás en modo normal (navegando)
+  vim.keymap.set("n", "q", function()
+    if terminal_win and vim.api.nvim_win_is_valid(terminal_win) then
+      vim.api.nvim_win_close(terminal_win, false)
+      terminal_win = nil
+    end
+  end, { buffer = terminal_buf, desc = "Close terminal" })
+
+  -- Volver al modo terminal
+  vim.keymap.set("n", "i", "i", { buffer = terminal_buf, desc = "Enter terminal mode" })
+  vim.keymap.set("n", "a", "a", { buffer = terminal_buf, desc = "Enter terminal mode" })
+
+  -- MODO VISUAL para seleccionar y copiar texto
+  -- Entrar en modo visual con v
+  vim.keymap.set("n", "v", "v", { buffer = terminal_buf, desc = "Enter visual mode" })
+  vim.keymap.set("n", "V", "V", { buffer = terminal_buf, desc = "Enter visual line mode" })
+
+  -- Selección rápida con Shift + flechas
+  vim.keymap.set("n", "<S-Up>", "V<Up>", { buffer = terminal_buf, desc = "Select line up" })
+  vim.keymap.set("n", "<S-Down>", "V<Down>", { buffer = terminal_buf, desc = "Select line down" })
+  vim.keymap.set("n", "<S-Left>", "v<Left>", { buffer = terminal_buf, desc = "Select char left" })
+  vim.keymap.set("n", "<S-Right>", "v<Right>", { buffer = terminal_buf, desc = "Select char right" })
+
+  -- En modo visual, expandir selección con Shift + flechas
+  vim.keymap.set("v", "<S-Up>", "<Up>", { buffer = terminal_buf, desc = "Extend selection up" })
+  vim.keymap.set("v", "<S-Down>", "<Down>", { buffer = terminal_buf, desc = "Extend selection down" })
+  vim.keymap.set("v", "<S-Left>", "<Left>", { buffer = terminal_buf, desc = "Extend selection left" })
+  vim.keymap.set("v", "<S-Right>", "<Right>", { buffer = terminal_buf, desc = "Extend selection right" })
+
+  -- Copiar con 'y' en modo visual
+  vim.keymap.set("v", "y", '"+y<Esc>', { buffer = terminal_buf, desc = "Copy selection to clipboard" })
+
+  -- Copiar línea completa con 'yy' en modo normal
+  vim.keymap.set("n", "yy", '"+yy', { buffer = terminal_buf, desc = "Copy line to clipboard" })
+
+  -- Seleccionar todo con Ctrl+a
+  vim.keymap.set("n", "<C-a>", "ggVG", { buffer = terminal_buf, desc = "Select all" })
+
+  -- Salir del modo visual con Esc
+  vim.keymap.set("v", "<Esc>", "<Esc>", { buffer = terminal_buf, desc = "Exit visual mode" })
+
+  -- Configurar opciones del buffer con estilo
+  vim.schedule(function()
+    if vim.api.nvim_buf_is_valid(terminal_buf) then
+      vim.api.nvim_buf_set_option(terminal_buf, "number", false)
+      vim.api.nvim_buf_set_option(terminal_buf, "relativenumber", false)
+      vim.api.nvim_buf_set_option(terminal_buf, "signcolumn", "no")
+
+      -- Aplicar highlights después de configurar el buffer
+      M.setup_terminal_highlights()
+    end
+  end)
+end
+
+-- Función para verificar si el terminal está abierto
+function M.is_open()
+  return terminal_win and vim.api.nvim_win_is_valid(terminal_win)
+end
+
+-- Configurar highlights súper estilizados
+function M.setup_terminal_highlights()
+  -- Crear highlights personalizados para la terminal
+  vim.api.nvim_set_hl(0, "TerminalBorder", {
+    fg = "#8be9fd", -- Cyan brillante para el borde
+    bg = "NONE",
+    bold = true,
+  })
+
+  vim.api.nvim_set_hl(0, "TerminalTitle", {
+    fg = "#50fa7b", -- Verde neón para el título
+    bg = "#282a36", -- Fondo oscuro
+    bold = true,
+    italic = true,
+  })
+
+  vim.api.nvim_set_hl(0, "TerminalFooter", {
+    fg = "#ff79c6", -- Rosa magenta para el footer
+    bg = "#282a36", -- Fondo oscuro
+    bold = true,
+  })
+
+  vim.api.nvim_set_hl(0, "TerminalBackground", {
+    fg = "#f8f8f2", -- Texto claro
+    bg = "#1e1e2e", -- Fondo ligeramente diferente para destacar
+  })
+
+  -- Aplicar los highlights a la ventana
+  if terminal_win and vim.api.nvim_win_is_valid(terminal_win) then
+    vim.api.nvim_win_set_option(
+      terminal_win,
+      "winhl",
+      "Normal:TerminalBackground,FloatBorder:TerminalBorder,FloatTitle:TerminalTitle,FloatFooter:TerminalFooter"
+    )
+
+    -- Configurar el cursor para que sea más visible
+    vim.api.nvim_win_set_option(terminal_win, "cursorline", false) -- Sin línea de cursor que pueda molestar
+  end
+end
+
+return M
+
+==> Fin de lua/config/terminal.lua <==
 
 ----------------------------------------
 

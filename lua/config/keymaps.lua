@@ -1,6 +1,3 @@
--- Keymaps are automatically loaded on the VeryLazy event
--- Default keymaps that are always set: https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua
--- Add any additional keymaps here
 local map = vim.keymap.set
 -- En modo visual, cuando presionas `p`, reemplaza sin copiar al registro
 map("v", "p", '"_dP', { noremap = true, silent = true })
@@ -8,9 +5,6 @@ map("v", "p", '"_dP', { noremap = true, silent = true })
 -- En modo visual, cuando presionas `x`, elimina sin copiar al registro
 map("v", "x", '"_x', { noremap = true, silent = true })
 map("n", "x", '"_x', { noremap = true, silent = true })
--- Lo mismo para la tecla Suprimir (Delete) en modo visual
-map("v", "<C-Del>", '"_x', { noremap = true, silent = true })
-map("n", "<C-Del>", '"_x', { noremap = true, silent = true })
 
 -- En modo normal, cuando presionas `ss`, elimina la línea sin copiarla
 map("n", "ss", '"_dd', { noremap = true, silent = true })
@@ -66,7 +60,7 @@ map("n", "<Leader>t", function()
   vim.cmd("Trouble diagnostics")
   vim.defer_fn(function()
     vim.cmd("wincmd j")
-  end, 50) -- Delay of 50 milliseconds
+  end, 100) -- Delay of 50 milliseconds
 end, { noremap = true, silent = true, desc = "Show Trouble diagnostics and move to the window" })
 
 -- Mapeo para seleccionar la palabra bajo el cursor y entrar en modo visual
@@ -97,43 +91,25 @@ map("n", "<C-Down>", "<NOP>", { noremap = true, silent = true })
 map("v", "<C-Up>", "<NOP>", { noremap = true, silent = true })
 map("v", "<C-Down>", "<NOP>", { noremap = true, silent = true })
 
----- Función para abrir terminal en la ubicación del archivo actual
-
 -- Función para abrir terminal en la ubicación del archivo actual
 local function open_terminal_in_file_dir()
-  -- Obtener la ruta absoluta del archivo actual
   local file_path = vim.fn.expand("%:p")
-
-  -- Si no hay archivo abierto, usar el directorio actual
   if file_path == "" then
     vim.notify("No hay archivo abierto, usando directorio actual", vim.log.levels.WARN)
     return
   end
-
-  -- Obtener el directorio del archivo
   local file_dir = vim.fn.fnamemodify(file_path, ":h")
-
-  -- Abrir nueva pestaña con terminal
   vim.cmd("tabnew")
-
-  -- Cambiar al directorio del archivo
   vim.cmd("lcd " .. vim.fn.fnameescape(file_dir))
-
-  -- Abrir terminal
   vim.cmd("terminal")
-
-  -- Mostrar mensaje con la ruta actual
   vim.notify("Terminal abierta en: " .. file_dir, vim.log.levels.INFO)
 end
 
--- Mapear <leader>tt para abrir terminal en la ubicación del archivo
 vim.keymap.set("n", "<leader>bu", open_terminal_in_file_dir, {
   noremap = true,
   silent = true,
   desc = "Open terminal in current file's directory",
 })
-
--- local map = vim.keymap.set
 
 map("n", "<leader>rp", require("config.transparent").toggle_transparency, {
   desc = "transparent",
@@ -148,7 +124,6 @@ vim.keymap.set("n", "<leader>ri", _G.gather_file_contents_smart, {
 })
 
 -- NUEVOS MAPEOS PARA COLORES DE CARPETAS
--- Mapeo para cambiar colores de carpetas
 vim.keymap.set("n", "<leader>rl", function()
   require("config.folder-colors").cycle_folder_colors()
 end, {
@@ -173,12 +148,6 @@ map("n", "<leader>ry", _G.show_little_bird, {
   desc = "Show little bird animation",
 })
 
--- Agregar estas líneas al final de tu lua/config/keymaps.lua
-
--- =============================================================================
--- TERMINAL FLOTANTE PERSONALIZADA
--- =============================================================================
-
 -- Mapeo principal para abrir/cerrar terminal
 map("n", "<leader>rt", function()
   require("config.terminal").toggle_terminal()
@@ -188,3 +157,38 @@ end, { noremap = true, silent = true, desc = "Toggle Terminal" })
 map("n", "<F11>", function()
   require("config.terminal").toggle_terminal()
 end, { noremap = true, silent = true, desc = "Toggle Terminal" })
+
+-- Función helper mejorada para revelar archivo actual en Neo-tree
+local function smart_neotree_toggle(source)
+  local current_file = vim.fn.expand("%:p")
+  local manager = require("neo-tree.sources.manager")
+  local state = manager.get_state(source)
+  if state and state.winid and vim.api.nvim_win_is_valid(state.winid) then
+    vim.cmd("Neotree close")
+  else
+    if current_file == "" then
+      vim.cmd("Neotree show " .. source)
+    else
+      vim.cmd("Neotree show " .. source .. " reveal")
+    end
+
+    vim.defer_fn(function()
+      vim.cmd("Neotree focus " .. source)
+    end, 200)
+  end
+end
+
+-- <leader>1: Abrir/cerrar Neo-tree en Files (con cursor automático)
+map("n", "<leader>1", function()
+  smart_neotree_toggle("filesystem")
+end, { desc = "Toggle Neo-tree Files (auto focus)" })
+
+-- <leader>2: Abrir/cerrar Neo-tree en Buffers (con cursor automático)
+map("n", "<leader>2", function()
+  smart_neotree_toggle("buffers")
+end, { desc = "Toggle Neo-tree Buffers (auto focus)" })
+
+-- <leader>3: Abrir/cerrar Neo-tree en Git (con cursor automático)
+map("n", "<leader>3", function()
+  smart_neotree_toggle("git_status")
+end, { desc = "Toggle Neo-tree Git (auto focus)" })

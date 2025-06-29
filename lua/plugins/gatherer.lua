@@ -95,7 +95,7 @@ return {
             .. '    "_pycache_"\n'
             .. '    "venv"\n'
             .. '    ".venv"\n'
-            -- .. '    "env"\n'
+            .. '    "env"\n'
             -- .. '    ".env"\n'
             .. '    ".git"\n'
             .. '    "tree1.sh"\n'
@@ -114,9 +114,17 @@ return {
           extensions = "process_extensions=(\n"
             .. '    "py" "pyx" "pyi"\n'
             .. '    "txt" "md" "json" "yaml" "yml"\n'
-            .. '    "sh" "sql" "html" "css"\n'
-            .. '    "js" "toml" "cfg" "ini"\n'
+            .. '    "sh" "sql" "html" "css" "js"\n'
+            .. '    "toml" "cfg" "ini" "env"\n' -- ← AGREGADO: .env files
+            .. '    "graphql" "lock"\n' -- ← AGREGADO: para GraphQL y lock files
             .. ")\n"
+
+          -- extensions = "process_extensions=(\n"
+          --   .. '    "py" "pyx" "pyi"\n'
+          --   .. '    "txt" "md" "json" "yaml" "yml"\n'
+          --   .. '    "sh" "sql" "html" "css"\n'
+          --   .. '    "js" "toml" "cfg" "ini"\n'
+          --   .. ")\n"
 
           find_logic = "# Enable globbing options for Python\n"
             .. "shopt -s dotglob nullglob globstar\n"

@@ -8,28 +8,26 @@ require("lualine").setup({
   sections = {
     lualine_a = { "mode" },
     lualine_b = {
-      "branch", -- Muestra la rama de git
-      "diff", -- Muestra los cambios (git diff)
-      "diagnostics", -- Muestra los diagnósticos (LSP)
+      "branch",
+      "diff",
+      "diagnostics",
     },
     lualine_c = { "filename" },
     lualine_x = {
-      "encoding", -- Muestra la codificación del archivo (por ejemplo, UTF-8)
-      "fileformat", -- Muestra el formato del archivo (por ejemplo, Unix)
-      "filetype", -- Muestra el tipo de archivo (con ícono)
+      "encoding",
+      "fileformat",
+      "filetype",
       {
-        -- Mostrar el porcentaje de progreso en el archivo
         function()
           local current_line = vim.fn.line(".")
           local total_lines = vim.fn.line("$")
           local percent = math.floor((current_line / total_lines) * 100)
-          return string.format("%3d", percent) .. "%%" -- Asegurar un ancho fijo para el porcentaje
+          return string.format("%3d", percent) .. "%%"
         end,
-        color = { fg = "#ffffff", gui = "bold" }, -- Personaliza el color del porcentaje
-        padding = { left = 2, right = 2 }, -- Espacio antes y después del porcentaje
+        color = { fg = "#ffffff", gui = "bold" },
+        padding = { left = 2, right = 2 },
       },
       {
-        -- Mostrar el nombre de la última carpeta con lógica condicional y fondo personalizado
         function()
           local cwd = vim.fn.fnamemodify(vim.fn.getcwd(), ":t")
           if cwd == "zEMVThreeServiceContextV4" then
@@ -43,24 +41,23 @@ require("lualine").setup({
         color = function()
           local cwd = vim.fn.fnamemodify(vim.fn.getcwd(), ":t")
           if cwd == "zEMVThreeServiceContextV4" then
-            return { fg = "#33c3ff", bg = "#3f3f3f", gui = "bold" } -- Color para "Front" con fondo gris oscuro
+            return { fg = "#33c3ff", bg = "#3f3f3f", gui = "bold" }
           elseif cwd == "zEMVThreeClientStandaloneV6" then
-            return { fg = "#ff5733", bg = "#3f3f3f", gui = "bold" } -- Color para "Back" con fondo gris oscuro
+            return { fg = "#ff5733", bg = "#3f3f3f", gui = "bold" }
           else
-            return { fg = "#ffffff", bg = "#3f3f3f", gui = "bold" } -- Color por defecto con fondo gris medio
+            return { fg = "#ffffff", bg = "#3f3f3f", gui = "bold" }
           end
         end,
-        padding = { left = 2, right = 2 }, -- Espacio antes del nombre de la carpeta
+        padding = { left = 2, right = 2 },
       },
     },
     lualine_y = {},
     lualine_z = {
       {
-        -- Mostrar la hora actual en la esquina derecha
         'os.date("%H:%M")',
-        color = { fg = "#ffffff", bg = "#000000" }, -- Fondo negro para la hora
+        color = { fg = "#ffffff", bg = "#000000" },
         icon = "🕒",
-        padding = { left = 2, right = 2 }, -- Espacio alrededor de la hora
+        padding = { left = 2, right = 2 },
       },
     },
   },

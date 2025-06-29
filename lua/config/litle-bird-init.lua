@@ -1,7 +1,6 @@
 local function show_ascii_art()
-  local buf = vim.api.nvim_create_buf(false, true) -- Crear un buffer flotante
+  local buf = vim.api.nvim_create_buf(false, true)
 
-  -- Definir los tres artes ASCII
   local ascii_art_1 = {
 
     "                                         *%%@+*..*####################################%.               ",
@@ -289,18 +288,14 @@ local function show_ascii_art()
     ".                     .=+ .*.           ::           ..*.  -=                      *-.=*.          - ",
   }
 
-  -- Obtener las dimensiones de la pantalla
-
   local width = vim.api.nvim_get_option("columns")
   local height = vim.api.nvim_get_option("lines")
 
-  -- Calcular la posición para centrar el arte ASCII
   local win_height = #ascii_art_1
   local win_width = 120 -- Ajusta según el ancho de tu arte
   local row = math.ceil((height - win_height) / 2 - 1)
   local col = math.ceil((width - win_width) / 2)
 
-  -- Configurar la ventana flotante
   local opts = {
     style = "minimal",
     relative = "editor",
@@ -311,7 +306,6 @@ local function show_ascii_art()
     border = "rounded",
   }
 
-  -- Abrir la ventana flotante
   local win = vim.api.nvim_open_win(buf, true, opts)
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, ascii_art_1)
   vim.api.nvim_buf_set_option(buf, "modifiable", false)
@@ -353,10 +347,8 @@ local function show_ascii_art()
     vim.api.nvim_buf_set_lines(buf, 0, -1, false, ascii_art_7)
     vim.api.nvim_buf_set_option(buf, "modifiable", false)
   end, 2800) -- 2000 ms = 2 segundos
-  -- Cerrar la ventana automáticamente después de otros 1 segundo (total de 3 segundos)
   vim.defer_fn(function()
-    vim.api.nvim_win_close(win, true) -- Cerrar la ventana utilizando su identificador
+    vim.api.nvim_win_close(win, true)
   end, 3500) -- 3000 ms = 3 segundos
-  -- Cerrar la ventana automáticamente después de otros 1 segundo (total de 3 segundos)
 end
 _G.show_little_bird = show_ascii_art

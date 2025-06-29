@@ -1,44 +1,35 @@
--- lua/config/terminal.lua
 local M = {}
 
--- Variable para trackear la ventana del terminal
 local terminal_win = nil
 local terminal_buf = nil
 
 function M.toggle_terminal()
-  -- Si la ventana existe y está abierta, cerrarla
   if terminal_win and vim.api.nvim_win_is_valid(terminal_win) then
     vim.api.nvim_win_close(terminal_win, false)
     terminal_win = nil
     return
   end
 
-  -- Calcular dimensiones (85% ancho, 75% alto para más espacio)
   local width = math.floor(vim.o.columns * 0.85)
   local height = math.floor(vim.o.lines * 0.75)
   local row = math.floor((vim.o.lines - height) / 2)
   local col = math.floor((vim.o.columns - width) / 2)
 
-  -- Crear buffer si no existe o si fue eliminado
   if not terminal_buf or not vim.api.nvim_buf_is_valid(terminal_buf) then
     terminal_buf = vim.api.nvim_create_buf(false, true)
 
-    -- Configurar el buffer del terminal
     vim.api.nvim_buf_set_option(terminal_buf, "bufhidden", "hide")
     vim.api.nvim_buf_set_option(terminal_buf, "buflisted", false)
   end
 
-  -- Obtener información del sistema para el header
   local username = vim.fn.expand("$USER") or "user"
   local hostname = vim.fn.hostname() or "localhost"
   local cwd = vim.fn.fnamemodify(vim.fn.getcwd(), ":t")
   local time = os.date("%H:%M")
   local date = os.date("%d/%m/%Y")
 
-  -- Crear título dinámico súper estilizado
   local title = string.format(" 🚀 %s@%s | %s | %s ", username, hostname, cwd, time)
 
-  -- Crear ventana flotante súper bonita
   terminal_win = vim.api.nvim_open_win(terminal_buf, true, {
     relative = "editor",
     width = width,
@@ -53,38 +44,29 @@ function M.toggle_terminal()
     footer_pos = "center",
   })
 
-  -- Aplicar highlights súper estilizados
   M.setup_terminal_highlights()
 
-  -- Variable para trackear si es un terminal nuevo
   local is_new_terminal = false
 
-  -- Si es un buffer nuevo o vacío, iniciar terminal
   if
     vim.api.nvim_buf_line_count(terminal_buf) <= 1
     and vim.api.nvim_buf_get_lines(terminal_buf, 0, -1, false)[1] == ""
   then
     is_new_terminal = true
 
-    -- ALTERNATIVA: Ejecutar neofetch directamente en el inicio del shell
     local shell_cmd = vim.o.shell
     if vim.o.shell:match("fish") then
-      -- Para fish shell
       shell_cmd = { vim.o.shell, "-c", "neofetch; exec " .. vim.o.shell }
     elseif vim.o.shell:match("zsh") then
-      -- Para zsh
       shell_cmd = { vim.o.shell, "-c", "neofetch; exec zsh" }
     elseif vim.o.shell:match("bash") then
-      -- Para bash
       shell_cmd = { vim.o.shell, "-c", "neofetch; exec bash" }
     else
-      -- Fallback genérico
       shell_cmd = { vim.o.shell, "-c", "neofetch 2>/dev/null || echo 'neofetch no encontrado'; exec " .. vim.o.shell }
     end
 
     vim.fn.termopen(shell_cmd, {
       on_exit = function()
-        -- Cuando el terminal se cierra, limpiar variables
         if terminal_win and vim.api.nvim_win_is_valid(terminal_win) then
           vim.api.nvim_win_close(terminal_win, false)
         end
@@ -94,10 +76,8 @@ function M.toggle_terminal()
     })
   end
 
-  -- Configurar mapeos específicos para este terminal
   M.setup_terminal_keymaps()
 
-  -- Entrar en modo terminal automáticamente
   vim.cmd("startinsert")
 end
 
@@ -106,7 +86,6 @@ function M.setup_terminal_keymaps()
     return
   end
 
-  -- Mapeos para cuando estás en modo terminal (escribiendo)
   vim.keymap.set("t", "<Esc><Esc>", function()
     if terminal_win and vim.api.nvim_win_is_valid(terminal_win) then
       vim.api.nvim_win_close(terminal_win, false)
