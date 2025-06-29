@@ -87,6 +87,92 @@ return {
         ["3"] = function()
           vim.cmd("Neotree focus git_status")
         end,
+
+        -- 🔥 NUEVA FUNCIÓN: Abrir todos los archivos de una carpeta
+        ["O"] = function(state)
+          local node = state.tree:get_node()
+          if node.type == "directory" then
+            local function open_all_files_in_dir(dir_path)
+              local files_opened = 0
+              local handle = vim.loop.fs_scandir(dir_path)
+
+              if handle then
+                while true do
+                  local name, type = vim.loop.fs_scandir_next(handle)
+                  if not name then
+                    break
+                  end
+
+                  local full_path = dir_path .. "/" .. name
+
+                  -- Si es un archivo, abrirlo
+                  if type == "file" then
+                    -- Filtrar archivos que no queremos abrir
+                    local ignored_extensions = { ".pyc", ".pyo", ".class", ".o", ".so", ".dll" }
+                    local ignored_files = { ".DS_Store", "Thumbs.db", ".gitignore" }
+
+                    local should_ignore = false
+
+                    -- Verificar extensiones ignoradas
+                    for _, ext in ipairs(ignored_extensions) do
+                      if name:match(ext .. "$") then
+                        should_ignore = true
+                        break
+                      end
+                    end
+
+                    -- Verificar archivos específicos ignorados
+                    for _, ignored in ipairs(ignored_files) do
+                      if name == ignored then
+                        should_ignore = true
+                        break
+                      end
+                    end
+
+                    if not should_ignore then
+                      vim.cmd("edit " .. vim.fn.fnameescape(full_path))
+                      files_opened = files_opened + 1
+                    end
+
+                  -- Si es un directorio, recursión
+                  elseif type == "directory" and name ~= "." and name ~= ".." then
+                    -- Evitar directorios que suelen tener muchos archivos innecesarios
+                    local ignored_dirs = {
+                      "node_modules",
+                      ".git",
+                      "__pycache__",
+                      ".pytest_cache",
+                      "dist",
+                      "build",
+                      ".venv",
+                      "venv",
+                      ".env",
+                    }
+
+                    local should_ignore_dir = false
+                    for _, ignored in ipairs(ignored_dirs) do
+                      if name == ignored then
+                        should_ignore_dir = true
+                        break
+                      end
+                    end
+
+                    if not should_ignore_dir then
+                      files_opened = files_opened + open_all_files_in_dir(full_path)
+                    end
+                  end
+                end
+              end
+
+              return files_opened
+            end
+
+            local total_files = open_all_files_in_dir(node.path)
+            vim.notify(string.format("📂 Abriendo %d archivos de: %s", total_files, node.name), vim.log.levels.INFO)
+          else
+            vim.notify("⚠️  Selecciona una carpeta para usar esta función", vim.log.levels.WARN)
+          end
+        end,
       },
     },
   },

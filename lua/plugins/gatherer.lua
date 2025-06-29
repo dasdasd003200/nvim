@@ -42,14 +42,13 @@ return {
       -- Generate script content based on project type
       local function generate_script_content(project_type)
         local base_script = "#!/usr/bin/env bash\n"
-          .. 'echo "Starting file content gathering for '
+          .. 'echo "Gathering '
           .. project_type
-          .. ' project..."\n'
+          .. ' project files..."\n'
           .. "# Output file\n"
           .. 'output_file="file_contents_output.txt"\n'
           .. "# Ensure the output file is empty at the start\n"
           .. 'echo "" > "$output_file"\n'
-          .. 'echo "Created empty output file: $output_file"\n'
 
         local ignore_list = ""
         local extensions = ""
@@ -70,6 +69,11 @@ return {
             .. '    "README.md"\n'
             .. '    ".gitignore"\n'
             .. '    ".angular"\n'
+            .. '    "package-lock.json"\n' -- AGREGADO: Omitir package-lock
+            .. '    "yarn.lock"\n' -- AGREGADO: Omitir yarn.lock
+            .. '    "pnpm-lock.yaml"\n' -- AGREGADO: Omitir pnpm-lock
+            .. '    ".vscode"\n' -- AGREGADO: Omitir configuración VS Code
+            .. '    ".idea"\n' -- AGREGADO: Omitir configuración IntelliJ
             .. ")\n"
 
           extensions = "process_extensions=(\n"
@@ -86,7 +90,9 @@ return {
             .. '          "$file" == *"/dist/"* || \n'
             .. '          "$file" == *"/build/"* || \n'
             .. '          "$file" == *"/coverage/"* || \n'
-            .. '          "$file" == *"/.next/"* ]]; then\n'
+            .. '          "$file" == *"/.next/"* || \n'
+            .. '          "$file" == *"/.vscode/"* || \n'
+            .. '          "$file" == *"/.idea/"* ]]; then\n'
             .. "        continue\n"
             .. "    fi\n"
         elseif project_type == "python" then
@@ -96,7 +102,6 @@ return {
             .. '    "venv"\n'
             .. '    ".venv"\n'
             .. '    "env"\n'
-            -- .. '    ".env"\n'
             .. '    ".git"\n'
             .. '    "tree1.sh"\n'
             .. '    "file_contents_output.txt"\n'
@@ -105,32 +110,31 @@ return {
             .. '    "uploads"\n'
             .. '    "Keys"\n'
             .. '    ".gitignore"\n'
-            -- .. '    "requirements.txt"\n'
             .. '    "Jenkinsfile"\n'
             .. '    "Dockerfile"\n'
             .. '    "commit_history.md"\n'
+            .. '    ".vscode"\n' -- AGREGADO: Omitir configuración VS Code
+            .. '    ".idea"\n' -- AGREGADO: Omitir configuración IntelliJ
+            .. '    "migrations"\n' -- AGREGADO: Omitir migraciones de Django
+            .. '    "staticfiles"\n' -- AGREGADO: Omitir archivos estáticos recolectados
+            .. '    "media"\n' -- AGREGADO: Omitir archivos de media
             .. ")\n"
 
           extensions = "process_extensions=(\n"
             .. '    "py" "pyx" "pyi"\n'
             .. '    "txt" "md" "json" "yaml" "yml"\n'
             .. '    "sh" "sql" "html" "css" "js"\n'
-            .. '    "toml" "cfg" "ini" "env"\n' -- ← AGREGADO: .env files
-            .. '    "graphql" "lock"\n' -- ← AGREGADO: para GraphQL y lock files
+            .. '    "toml" "cfg" "ini" "env"\n'
+            .. '    "graphql" "lock"\n'
             .. ")\n"
-
-          -- extensions = "process_extensions=(\n"
-          --   .. '    "py" "pyx" "pyi"\n'
-          --   .. '    "txt" "md" "json" "yaml" "yml"\n'
-          --   .. '    "sh" "sql" "html" "css"\n'
-          --   .. '    "js" "toml" "cfg" "ini"\n'
-          --   .. ")\n"
 
           find_logic = "# Enable globbing options for Python\n"
             .. "shopt -s dotglob nullglob globstar\n"
             .. "for file in **; do\n"
-            .. "    # Skip if matches pycache pattern\n"
-            .. '    if [[ "$file" == *"__pycache__"* || "$file" == *"_pycache_"* ]]; then\n'
+            .. "    # Skip if matches pycache pattern or migrations\n"
+            .. '    if [[ "$file" == *"__pycache__"* || "$file" == *"_pycache_"* || \n'
+            .. '          "$file" == *"/migrations/"* || "$file" == *"/staticfiles/"* || \n'
+            .. '          "$file" == *"/media/"* ]]; then\n'
             .. "        continue\n"
             .. "    fi\n"
         else -- mixed project
@@ -148,6 +152,12 @@ return {
             .. '    "file_contents_output.txt"\n'
             .. '    "README.md"\n'
             .. '    ".gitignore"\n'
+            .. '    "package-lock.json"\n' -- AGREGADO: Omitir package-lock
+            .. '    "yarn.lock"\n' -- AGREGADO: Omitir yarn.lock
+            .. '    "pnpm-lock.yaml"\n' -- AGREGADO: Omitir pnpm-lock
+            .. '    ".vscode"\n' -- AGREGADO: Omitir configuración VS Code
+            .. '    ".idea"\n' -- AGREGADO: Omitir configuración IntelliJ
+            .. '    "migrations"\n' -- AGREGADO: Omitir migraciones
             .. ")\n"
 
           extensions = "process_extensions=(\n"
@@ -165,7 +175,8 @@ return {
             .. '          "$file" == *"/__pycache__/"* || \n'
             .. '          "$file" == *"/_pycache_/"* || \n'
             .. '          "$file" == *"/venv/"* || \n'
-            .. '          "$file" == *"/dist/"* ]]; then\n'
+            .. '          "$file" == *"/dist/"* || \n'
+            .. '          "$file" == *"/migrations/"* ]]; then\n'
             .. "        continue\n"
             .. "    fi\n"
         end
@@ -208,7 +219,6 @@ return {
             .. "        fi\n"
             .. "        # Verifica si es un archivo procesable y no es .pyc\n"
             .. '        if is_processable_extension "$file" && [[ "$file" != *.pyc ]]; then\n'
-            .. '            echo "Processing: $relative_path"\n'
             .. "            # Añade el nombre del archivo\n"
             .. '            printf "==> %s <==\\n" "$relative_path" >> "$output_file"\n'
             .. "            # Muestra el contenido del archivo\n"
@@ -227,7 +237,6 @@ return {
             .. "    fi\n"
             .. "    # Verifica si es un archivo procesable\n"
             .. '    if [[ -f "$file" ]] && is_processable_extension "$file"; then\n'
-            .. '        echo "Processing: $relative_path"\n'
             .. "        # Añade el nombre del archivo\n"
             .. '        echo "==> $relative_path <==" >> "$output_file"\n'
             .. "        # Muestra el contenido del archivo\n"
@@ -243,12 +252,11 @@ return {
           .. ignore_list
           .. extensions
           .. common_functions
-          .. 'echo "Scanning for files..."\n'
           .. "file_count=0\n"
           .. find_logic
           .. processing_logic
           .. "done\n"
-          .. 'echo "Script execution complete. Processed $file_count files. Output has been written to $output_file"\n'
+          .. 'echo "✅ Processed $file_count files. Output saved to $output_file"\n'
       end
 
       -- Main function to gather file contents
@@ -264,15 +272,8 @@ return {
         -- Store the original working directory before changing it
         local original_dir = vim.fn.getcwd()
 
-        -- Notify user about project type and script start
-        vim.notify(
-          string.format(
-            "Detected %s project. Starting file content gathering in: %s",
-            project_type:upper(),
-            current_dir
-          ),
-          vim.log.levels.INFO
-        )
+        -- Notify user about project type and script start (UN SOLO MENSAJE)
+        vim.notify(string.format("🚀 Gathering %s project files...", project_type:upper()), vim.log.levels.INFO)
 
         -- Change to the current file's directory
         vim.fn.chdir(current_dir)
@@ -286,56 +287,46 @@ return {
         vim.fn.system("chmod +x " .. script_path.filename)
 
         -- Run the script and capture stdout
-        Job
-          :new({
-            command = script_path.filename,
-            cwd = current_dir,
-            on_stdout = function(_, data)
-              -- Print script output to help with debugging
+        Job:new({
+          command = script_path.filename,
+          cwd = current_dir,
+          on_stdout = function(_, data)
+            -- Solo mostrar el mensaje final, no todos los "Processing:"
+            if string.match(data, "✅ Processed") then
               print(data)
-            end,
-            on_exit = function(j, return_val)
-              -- Return to the original directory no matter what
-              vim.schedule(function()
-                vim.cmd("cd " .. vim.fn.fnameescape(original_dir))
-              end)
+            end
+          end,
+          on_exit = function(j, return_val)
+            -- Return to the original directory no matter what
+            vim.schedule(function()
+              vim.cmd("cd " .. vim.fn.fnameescape(original_dir))
+            end)
 
-              if return_val == 0 then
-                -- Check if the output file exists and is not empty
-                local output_file = current_dir .. "/file_contents_output.txt"
-                local f = io.open(output_file, "r")
-                if f then
-                  local content = f:read("*all")
-                  f:close()
-                  if content and #content > 0 then
-                    vim.notify(
-                      string.format(
-                        "File contents gathered successfully for %s project to file_contents_output.txt in %s",
-                        project_type:upper(),
-                        current_dir
-                      ),
-                      vim.log.levels.INFO
-                    )
-                  else
-                    vim.notify(
-                      "Warning: Output file is empty. No files may have matched your criteria.",
-                      vim.log.levels.WARN
-                    )
-                  end
+            if return_val == 0 then
+              -- Check if the output file exists and is not empty
+              local output_file = current_dir .. "/file_contents_output.txt"
+              local f = io.open(output_file, "r")
+              if f then
+                local content = f:read("*all")
+                f:close()
+                if content and #content > 0 then
+                  vim.notify(
+                    string.format("✅ Files gathered successfully (%s project)", project_type:upper()),
+                    vim.log.levels.INFO
+                  )
                 else
-                  vim.notify("Error: Could not open output file to verify contents.", vim.log.levels.ERROR)
+                  vim.notify("⚠️  No files found matching criteria", vim.log.levels.WARN)
                 end
-                -- Clean up temporary script
-                script_path:rm()
               else
-                vim.notify(
-                  string.format("Error running file contents gatherer script. Exit code: %d", return_val),
-                  vim.log.levels.ERROR
-                )
+                vim.notify("❌ Could not create output file", vim.log.levels.ERROR)
               end
-            end,
-          })
-          :start()
+              -- Clean up temporary script
+              script_path:rm()
+            else
+              vim.notify("❌ Error gathering files", vim.log.levels.ERROR)
+            end
+          end,
+        }):start()
       end
 
       -- Legacy function for backward compatibility

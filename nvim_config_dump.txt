@@ -1,5 +1,5 @@
 === Configuración de Neovim en NixOS ===
-Fecha: sáb 21 jun 2025 10:21:46 -04
+Fecha: dom 29 jun 2025 10:08:40 -04
 Ruta: /home/dasdasd/.config/nvim
 ===============================
 
@@ -98,6 +98,206 @@ return {
 }
 
 ==> Fin de lua/plugins/transparent.lua <==
+
+----------------------------------------
+
+==> Archivo: lua/plugins/hover.lua <==
+
+-- lua/plugins/hover.lua
+return {
+  {
+    "lewis6991/hover.nvim",
+    config = function()
+      require("hover").setup({
+        init = function()
+          -- Solo lo básico que necesitamos
+          require("hover.providers.lsp")
+        end,
+        preview_opts = {
+          border = "rounded",
+        },
+        preview_window = false,
+        title = true,
+        mouse_providers = {
+          "LSP",
+        },
+        mouse_delay = 1000,
+      })
+
+      -- Solo 2 keymaps:
+
+      -- 1. Para ver la DEFINICIÓN REAL del tipo en ventana: <leader>rk
+      vim.keymap.set("n", "<leader>rk", function()
+        -- Obtener la posición actual
+        local params = vim.lsp.util.make_position_params()
+
+        -- Buscar la definición del tipo
+        vim.lsp.buf_request(0, "textDocument/typeDefinition", params, function(err, result, ctx, config)
+          if err or not result or #result == 0 then
+            -- Si no hay typeDefinition, intentar con definition
+            vim.lsp.buf_request(0, "textDocument/definition", params, function(err2, result2, ctx2, config2)
+              if err2 or not result2 or #result2 == 0 then
+                vim.notify("No se encontró definición del tipo", vim.log.levels.WARN)
+                return
+              end
+              result = result2
+            end)
+          end
+
+          if not result or #result == 0 then
+            return
+          end
+
+          -- Obtener la ubicación de la definición
+          local location = result[1]
+          if not location.uri then
+            vim.notify("No se pudo obtener la ubicación", vim.log.levels.WARN)
+            return
+          end
+
+          -- Leer el archivo donde está la definición
+          local file_path = vim.uri_to_fname(location.uri)
+          local file_lines = {}
+
+          -- Leer el archivo
+          local file = io.open(file_path, "r")
+          if not file then
+            vim.notify("No se pudo abrir el archivo", vim.log.levels.ERROR)
+            return
+          end
+
+          for line in file:lines() do
+            table.insert(file_lines, line)
+          end
+          file:close()
+
+          -- Obtener la línea donde empieza la definición
+          local start_line = location.range.start.line + 1
+
+          -- Buscar la definición completa (desde export type hasta la llave que cierra)
+          local definition_lines = {}
+          local brace_count = 0
+          local in_definition = false
+
+          for i = start_line, #file_lines do
+            local line = file_lines[i]
+            table.insert(definition_lines, line)
+
+            -- Contar llaves para saber dónde termina la definición
+            if line:match("export type") or line:match("interface") then
+              in_definition = true
+            end
+
+            if in_definition then
+              -- Contar llaves abiertas y cerradas
+              local open_braces = select(2, line:gsub("{", ""))
+              local close_braces = select(2, line:gsub("}", ""))
+              brace_count = brace_count + open_braces - close_braces
+
+              -- Si las llaves están balanceadas, terminamos
+              if brace_count == 0 and line:match("}") then
+                break
+              end
+            end
+
+            -- Límite de seguridad
+            if #definition_lines > 50 then
+              break
+            end
+          end
+
+          -- Crear buffer temporal
+          local buf = vim.api.nvim_create_buf(false, true)
+
+          -- Agregar título
+          local title_lines = { "================================   ", "" }
+          for _, line in ipairs(title_lines) do
+            table.insert(definition_lines, 1, line)
+          end
+
+          vim.api.nvim_buf_set_lines(buf, 0, -1, false, definition_lines)
+          vim.api.nvim_buf_set_option(buf, "filetype", "typescript")
+
+          -- Crear ventana flotante
+          local width = math.min(100, vim.o.columns - 10)
+          local height = math.min(#definition_lines + 2, vim.o.lines - 10)
+          local row = math.floor((vim.o.lines - height) / 2)
+          local col = math.floor((vim.o.columns - width) / 2)
+
+          local win = vim.api.nvim_open_win(buf, true, {
+            relative = "editor",
+            width = width,
+            height = height,
+            row = row,
+            col = col,
+            style = "minimal",
+            border = "rounded",
+            title = " Type Definition ",
+            title_pos = "center",
+          })
+
+          -- Cerrar con q o Esc
+          vim.keymap.set("n", "q", "<cmd>close<cr>", { buffer = buf })
+          vim.keymap.set("n", "<Esc>", "<cmd>close<cr>", { buffer = buf })
+        end)
+      end, { desc = "Show type definition in popup" })
+
+      -- 2. Para git blame: <leader>rg
+      vim.keymap.set("n", "<leader>rg", function()
+        local line = vim.fn.line(".")
+        local file = vim.fn.expand("%:p")
+
+        if file == "" then
+          vim.notify("No hay archivo abierto", vim.log.levels.WARN)
+          return
+        end
+
+        -- Git blame simple
+        local cmd = string.format('git blame -L %d,%d "%s"', line, line, file)
+        local result = vim.fn.system(cmd)
+
+        if vim.v.shell_error ~= 0 then
+          vim.notify("No es un repo git o error", vim.log.levels.ERROR)
+          return
+        end
+
+        -- Parsear resultado simple
+        local parts = {}
+        for part in result:gmatch("%S+") do
+          table.insert(parts, part)
+        end
+
+        local commit = parts[1] and parts[1]:sub(1, 8) or "Unknown"
+        local author = "Unknown"
+        local date = "Unknown"
+
+        -- Buscar autor y fecha en el resultado
+        if result:find("%(") then
+          author = result:match("%(([^%d]+)") or "Unknown"
+          author = author:gsub("%s+$", "") -- quitar espacios
+          date = result:match("(%d%d%d%d%-%d%d%-%d%d)") or "Unknown"
+        end
+
+        -- Mostrar info simple
+        local info = {
+          "🔍 Git Blame - Línea " .. line,
+          "",
+          "👤 " .. author,
+          "📅 " .. date,
+          "🔗 " .. commit,
+        }
+
+        vim.notify(table.concat(info, "\n"), vim.log.levels.INFO, { title = "Git Blame" })
+      end, { desc = "Git blame línea actual" })
+
+      -- Mouse hover automático
+      vim.keymap.set("n", "<MouseMove>", require("hover").hover_mouse, { desc = "hover.nvim (mouse)" })
+      vim.o.mousemoveevent = true
+    end,
+  },
+}
+
+==> Fin de lua/plugins/hover.lua <==
 
 ----------------------------------------
 
@@ -200,7 +400,7 @@ return {
             .. '    "_pycache_"\n'
             .. '    "venv"\n'
             .. '    ".venv"\n'
-            -- .. '    "env"\n'
+            .. '    "env"\n'
             -- .. '    ".env"\n'
             .. '    ".git"\n'
             .. '    "tree1.sh"\n'
@@ -219,9 +419,17 @@ return {
           extensions = "process_extensions=(\n"
             .. '    "py" "pyx" "pyi"\n'
             .. '    "txt" "md" "json" "yaml" "yml"\n'
-            .. '    "sh" "sql" "html" "css"\n'
-            .. '    "js" "toml" "cfg" "ini"\n'
+            .. '    "sh" "sql" "html" "css" "js"\n'
+            .. '    "toml" "cfg" "ini" "env"\n' -- ← AGREGADO: .env files
+            .. '    "graphql" "lock"\n' -- ← AGREGADO: para GraphQL y lock files
             .. ")\n"
+
+          -- extensions = "process_extensions=(\n"
+          --   .. '    "py" "pyx" "pyi"\n'
+          --   .. '    "txt" "md" "json" "yaml" "yml"\n'
+          --   .. '    "sh" "sql" "html" "css"\n'
+          --   .. '    "js" "toml" "cfg" "ini"\n'
+          --   .. ")\n"
 
           find_logic = "# Enable globbing options for Python\n"
             .. "shopt -s dotglob nullglob globstar\n"
@@ -742,30 +950,27 @@ return {
 
 ==> Archivo: lua/plugins/neo-tree.lua <==
 
---
--- return {
---   "nvim-neo-tree/neo-tree.nvim",
---   opts = {
---     filesystem = {
---       filtered_items = {
---         visible = true,
---         show_hidden_count = true,
---         hide_dotfiles = false,
---         hide_gitignored = true,
---         hide_by_name = {
---           -- '.git',
---           -- '.DS_Store',
---           -- 'thumbs.db',
---         },
---         never_show = {},
---       },
---     },
---   },
--- }
---
 return {
   "nvim-neo-tree/neo-tree.nvim",
   opts = {
+    default_source = "filesystem",
+
+    source_selector = {
+      winbar = true, -- Mostrar pestañas en la parte superior
+      statusline = false, -- No mostrar en statusline
+      content_layout = "center", -- Centrar el contenido
+      sources = {
+        { source = "filesystem" },
+        { source = "buffers" },
+        { source = "git_status" },
+      },
+      tabs = {
+        { source = "filesystem", display_name = "  Files" },
+        { source = "buffers", display_name = "  Buffers" },
+        { source = "git_status", display_name = "  Git" },
+      },
+    },
+
     filesystem = {
       filtered_items = {
         visible = true,
@@ -780,7 +985,32 @@ return {
         never_show = {},
       },
     },
-    -- Configuración de íconos de git (deshabilitados)
+
+    -- Configuración para la pestaña de buffers
+    buffers = {
+      follow_current_file = {
+        enabled = true, -- Seguir el archivo actual
+      },
+      group_empty_dirs = true, -- Agrupar directorios vacíos
+      show_unloaded = true, -- Mostrar buffers no cargados
+    },
+
+    -- Configuración para la pestaña de git
+    git_status = {
+      window = {
+        mappings = {
+          ["A"] = "git_add_all",
+          ["gu"] = "git_unstage_file",
+          ["ga"] = "git_add_file",
+          ["gr"] = "git_revert_file",
+          ["gc"] = "git_commit",
+          ["gp"] = "git_push",
+          ["gg"] = "git_commit_and_push",
+        },
+      },
+    },
+
+    -- Configuración de íconos de git (sin modificar)
     default_component_configs = {
       git_status = {
         symbols = {
@@ -796,16 +1026,21 @@ return {
         },
       },
     },
-    -- Alternativamente, si quieres deshabilitar completamente los íconos de git:
-    -- window = {
-    --   mappings = {
-    --     ["<space>"] = "none",
-    --   },
-    -- },
-    -- source_selector = {
-    --   winbar = false,
-    --   statusline = false,
-    -- },
+
+    window = {
+      width = 50, -- 🔧 CAMBIA ESTE NÚMERO: 30=estrecho, 45=medio, 60=ancho, 80=muy ancho
+      mappings = {
+        ["1"] = function()
+          vim.cmd("Neotree focus filesystem")
+        end,
+        ["2"] = function()
+          vim.cmd("Neotree focus buffers")
+        end,
+        ["3"] = function()
+          vim.cmd("Neotree focus git_status")
+        end,
+      },
+    },
   },
 }
 
@@ -1182,9 +1417,6 @@ return M
 
 ==> Archivo: lua/config/options.lua <==
 
--- Options are automatically loaded before lazy.nvim startup
--- Default options that are always set: https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/options.lua
--- Add any additional options here
 vim.g.lazyvim_prettier_needs_config = false
 
 ==> Fin de lua/config/options.lua <==
@@ -1194,39 +1426,88 @@ vim.g.lazyvim_prettier_needs_config = false
 ==> Archivo: lua/config/lsp-config.lua <==
 
 -- lua/config/lsp-config.lua
--- SIMPLEST SOLUTION: Just make the Django "errors" look like VSCode warnings
+-- CONFIGURACIÓN ULTRA MINIMALISTA - SOLO ERRORES CRÍTICOS
 
 local lspconfig = require("lspconfig")
 
+-- ===== PYRIGHT ULTRA MINIMALISTA =====
 lspconfig.pyright.setup({
   settings = {
     python = {
       analysis = {
-        -- Keep basic type checking but make it less strict
-        typeCheckingMode = "basic", -- Less strict than "standard"
-        autoSearchPaths = true,
-        useLibraryCodeForTypes = true,
-        autoImportCompletions = true,
+        -- DESACTIVAR TODO EL TYPE CHECKING
+        typeCheckingMode = "off",
+        autoSearchPaths = false,
+        useLibraryCodeForTypes = false,
+        autoImportCompletions = false,
 
-        -- Turn Django "errors" into "information" (like VSCode does)
+        -- SILENCIAR TODO - ABSOLUTAMENTE TODO
         diagnosticSeverityOverrides = {
-          reportArgumentType = "information", -- Your BooleanField issue
-          reportIncompatibleVariableOverride = "information", -- Your Meta class issue
-          reportReturnType = "information", -- Your property return issue
-          reportGeneralTypeIssues = "information", -- General Django patterns
-          reportOptionalMemberAccess = "information", -- Django optional access
-          reportUnknownMemberType = "information", -- Django dynamic attributes
-          reportUnknownArgumentType = "information", -- Django dynamic args
-          reportUntypedFunctionDecorator = "information", -- Django decorators like @login_required
-          reportUntypedBaseClass = "information", -- Django model inheritance
-          reportMissingTypeStubs = "information", -- Missing Django stubs
+          -- IMPORTS Y VARIABLES
+          reportMissingImports = "none",
+          reportMissingModuleSource = "none",
+          reportUndefinedVariable = "error", -- SOLO ESTE como error
+          reportUnusedImport = "none",
+          reportUnusedVariable = "none",
+
+          -- DJANGO Y TIPOS
+          reportArgumentType = "none",
+          reportIncompatibleVariableOverride = "none",
+          reportReturnType = "none",
+          reportGeneralTypeIssues = "none",
+          reportOptionalMemberAccess = "none",
+          reportUnknownMemberType = "none",
+          reportUnknownArgumentType = "none",
+          reportUntypedFunctionDecorator = "none",
+          reportUntypedBaseClass = "none",
+          reportMissingParameterType = "none",
+          reportUnknownParameterType = "none",
+          reportUnknownVariableType = "none",
+          reportMissingTypeStubs = "none",
+          reportCallIssue = "none",
+          reportAssignmentType = "none",
+          reportAttributeAccessIssue = "none",
+          reportIncompatibleMethodOverride = "none",
+          reportInvalidTypeArguments = "none",
+          reportInvalidTypeVarUse = "none",
+          reportPossiblyUnboundVariable = "none",
+          reportOperatorIssue = "none",
+
+          -- TODO LO DEMÁS
+          reportUnusedFunction = "none",
+          reportPrivateUsage = "none",
+          reportConstantRedefinition = "none",
+          reportDuplicateImport = "none",
+          reportSelfClsParameterName = "none",
+          reportUninitializedInstanceVariable = "none",
+          reportUnnecessaryCast = "none",
+          reportUnnecessaryComparison = "none",
+          reportUnnecessaryContains = "none",
+          reportUnnecessaryIsInstance = "none",
+          reportUnreachableCode = "none",
+          reportUnusedExpression = "none",
+          reportWildcardImportFromLibrary = "none",
+          reportOptionalCall = "none",
+          reportOptionalContextManager = "none",
+          reportOptionalIterable = "none",
+          reportOptionalOperand = "none",
+          reportOptionalSubscript = "none",
+          reportOverlappingOverload = "none",
+          reportUnusedClass = "none",
+          reportUnusedCoroutine = "none",
+          reportInvalidStringEscapeSequence = "none",
+          reportInvalidTypeAnnotation = "none",
+
+          -- SOLO SINTAXIS CRÍTICA
+          reportSyntaxError = "error",
+          reportIndentationError = "error",
         },
       },
     },
   },
 })
 
--- Keep your existing TypeScript config
+-- TypeScript como estaba
 lspconfig.vtsls.setup({
   settings = {
     typescript = {
@@ -1237,102 +1518,140 @@ lspconfig.vtsls.setup({
   },
 })
 
--- Configure diagnostics to display like VSCode
+-- ===== CONFIGURACIÓN DE DIAGNÓSTICOS ULTRA MINIMALISTA =====
 vim.diagnostic.config({
   virtual_text = {
-    -- Only show errors and warnings as virtual text, not info
-    severity = { min = vim.diagnostic.severity.WARN },
-    source = "if_many",
+    -- SOLO ERRORES CRÍTICOS
+    severity = { min = vim.diagnostic.severity.ERROR },
+    source = "never", -- No mostrar fuente
     format = function(diagnostic)
       return string.format("%s", diagnostic.message)
     end,
+    prefix = "🚨", -- Solo para errores críticos
+    spacing = 1,
   },
   signs = {
-    -- Show all levels in the sign column but with different icons
-    severity = { min = vim.diagnostic.severity.HINT },
+    -- SOLO ERRORES CRÍTICOS
+    severity = { min = vim.diagnostic.severity.ERROR },
   },
   underline = {
-    -- Only underline warnings and errors, not info
-    severity = { min = vim.diagnostic.severity.WARN },
+    -- SOLO ERRORES CRÍTICOS
+    severity = { min = vim.diagnostic.severity.ERROR },
   },
   float = {
-    source = "always",
+    -- Para cuando abras el float manualmente
+    source = "if_many",
     border = "rounded",
+    header = "",
+    prefix = "",
+    severity_sort = true,
   },
   severity_sort = true,
-  update_in_insert = false, -- Don't show while typing (like VSCode)
+  update_in_insert = false,
 })
 
--- Custom diagnostic signs (like VSCode)
+-- ===== ICONOS SOLO PARA ERRORES =====
 local signs = {
-  { name = "DiagnosticSignError", text = "❌" },
-  { name = "DiagnosticSignWarn", text = "⚠️" },
-  { name = "DiagnosticSignHint", text = "💡" },
-  { name = "DiagnosticSignInfo", text = "ℹ️" },
+  { name = "DiagnosticSignError", text = "🚨", hl = "DiagnosticSignError" },
+  { name = "DiagnosticSignWarn", text = "", hl = "DiagnosticSignWarn" }, -- Vacío
+  { name = "DiagnosticSignHint", text = "", hl = "DiagnosticSignHint" }, -- Vacío
+  { name = "DiagnosticSignInfo", text = "", hl = "DiagnosticSignInfo" }, -- Vacío
 }
 
 for _, sign in ipairs(signs) do
-  vim.fn.sign_define(sign.name, { texthl = sign.name, text = sign.text, numhl = "" })
+  vim.fn.sign_define(sign.name, {
+    texthl = sign.hl,
+    text = sign.text,
+    numhl = "",
+  })
 end
 
--- -- lua/config/lsp-config.lua
--- local lspconfig = require("lspconfig")
---
--- -- Configure pylsp (Python LSP) instead of or alongside other Python LSPs
--- lspconfig.pylsp.setup({
---   settings = {
---     pylsp = {
---       plugins = {
---         -- Disable some strict checking
---         pycodestyle = { enabled = false },
---         mccabe = { enabled = false },
---         pyflakes = { enabled = false },
---         -- Use autopep8 for formatting instead of strict linting
---         autopep8 = { enabled = true },
---         -- Enable rope for refactoring
---         rope_completion = { enabled = true },
---       },
---     },
---   },
--- })
---
--- -- Configure Pyright with Django-friendly settings
--- lspconfig.pyright.setup({
---   settings = {
---     python = {
---       analysis = {
---         -- Make Pyright less strict for Django
---         typeCheckingMode = "basic", -- Change from "strict" to "basic"
---         autoSearchPaths = true,
---         useLibraryCodeForTypes = true,
---         autoImportCompletions = true,
---         diagnosticMode = "workspace",
---         -- Disable specific strict checks that cause issues with Django
---         diagnosticSeverityOverrides = {
---           reportArgumentType = "none", -- Disable the argument type errors you're seeing
---           reportIncompatibleVariableOverride = "none", -- Disable Meta class override warnings
---           reportReturnType = "none", -- Disable return type mismatches for Django fields
---           reportGeneralTypeIssues = "none", -- More lenient on general type issues
---           reportOptionalMemberAccess = "information", -- Less strict on optional access
---           reportOptionalOperand = "information",
---           reportOptionalSubscript = "information",
---           reportPrivateImportUsage = "information",
---         },
---       },
---     },
---   },
--- })
---
--- -- If you want to use both, you can configure them for different purposes
--- lspconfig.vtsls.setup({
---   settings = {
---     typescript = {
---       inlayHints = {
---         includeInlayParameterNameHints = "none",
---       },
---     },
---   },
--- })
+-- ===== COLORES PARA ERRORES CRÍTICOS =====
+-- Solo errores en rojo brillante
+vim.api.nvim_set_hl(0, "DiagnosticVirtualTextError", {
+  fg = "#ff3333", -- Rojo brillante para errores críticos
+  bold = true,
+})
+
+vim.api.nvim_set_hl(0, "DiagnosticSignError", {
+  fg = "#ff3333",
+  bold = true,
+})
+
+vim.api.nvim_set_hl(0, "DiagnosticUnderlineError", {
+  undercurl = true,
+  sp = "#ff3333",
+})
+
+-- Hacer invisibles los otros niveles
+vim.api.nvim_set_hl(0, "DiagnosticVirtualTextWarn", { fg = "NONE" })
+vim.api.nvim_set_hl(0, "DiagnosticVirtualTextInfo", { fg = "NONE" })
+vim.api.nvim_set_hl(0, "DiagnosticVirtualTextHint", { fg = "NONE" })
+
+-- ===== FUNCIÓN PARA CONTROL TOTAL =====
+_G.toggle_all_diagnostics = function()
+  local current_config = vim.diagnostic.config()
+  if current_config.virtual_text == false then
+    -- Reactivar solo errores críticos
+    vim.diagnostic.config({
+      virtual_text = {
+        severity = { min = vim.diagnostic.severity.ERROR },
+        format = function(diagnostic)
+          return string.format("🚨 %s", diagnostic.message)
+        end,
+      },
+      signs = { severity = { min = vim.diagnostic.severity.ERROR } },
+      underline = { severity = { min = vim.diagnostic.severity.ERROR } },
+    })
+    vim.notify("Diagnósticos CRÍTICOS activados", vim.log.levels.INFO)
+  else
+    -- Desactivar todo completamente
+    vim.diagnostic.config({
+      virtual_text = false,
+      signs = false,
+      underline = false,
+      float = false,
+    })
+    vim.notify("TODOS los diagnósticos desactivados", vim.log.levels.INFO)
+  end
+end
+
+-- ===== FUNCIÓN PARA MOSTRAR TEMPORALMENTE TODO =====
+_G.show_all_diagnostics_temp = function()
+  vim.diagnostic.config({
+    virtual_text = {
+      severity = { min = vim.diagnostic.severity.HINT },
+      format = function(diagnostic)
+        local level = ""
+        if diagnostic.severity == vim.diagnostic.severity.ERROR then
+          level = "🚨"
+        elseif diagnostic.severity == vim.diagnostic.severity.WARN then
+          level = "⚠️"
+        elseif diagnostic.severity == vim.diagnostic.severity.INFO then
+          level = "ℹ️"
+        else
+          level = "💡"
+        end
+        return string.format("%s %s", level, diagnostic.message)
+      end,
+    },
+    signs = { severity = { min = vim.diagnostic.severity.HINT } },
+    underline = { severity = { min = vim.diagnostic.severity.HINT } },
+  })
+  vim.notify("Mostrando TODOS los diagnósticos temporalmente", vim.log.levels.WARN)
+
+  -- Volver a solo errores después de 10 segundos
+  vim.defer_fn(function()
+    vim.diagnostic.config({
+      virtual_text = { severity = { min = vim.diagnostic.severity.ERROR } },
+      signs = { severity = { min = vim.diagnostic.severity.ERROR } },
+      underline = { severity = { min = vim.diagnostic.severity.ERROR } },
+    })
+    vim.notify("Volviendo a mostrar solo errores críticos", vim.log.levels.INFO)
+  end, 10000) -- 10 segundos
+end
+
+print("🔥 LSP configurado ULTRA MINIMALISTA - Solo errores críticos")
 
 ==> Fin de lua/config/lsp-config.lua <==
 
@@ -1341,9 +1660,8 @@ end
 ==> Archivo: lua/config/litle-bird-init.lua <==
 
 local function show_ascii_art()
-  local buf = vim.api.nvim_create_buf(false, true) -- Crear un buffer flotante
+  local buf = vim.api.nvim_create_buf(false, true)
 
-  -- Definir los tres artes ASCII
   local ascii_art_1 = {
 
     "                                         *%%@+*..*####################################%.               ",
@@ -1631,18 +1949,14 @@ local function show_ascii_art()
     ".                     .=+ .*.           ::           ..*.  -=                      *-.=*.          - ",
   }
 
-  -- Obtener las dimensiones de la pantalla
-
   local width = vim.api.nvim_get_option("columns")
   local height = vim.api.nvim_get_option("lines")
 
-  -- Calcular la posición para centrar el arte ASCII
   local win_height = #ascii_art_1
   local win_width = 120 -- Ajusta según el ancho de tu arte
   local row = math.ceil((height - win_height) / 2 - 1)
   local col = math.ceil((width - win_width) / 2)
 
-  -- Configurar la ventana flotante
   local opts = {
     style = "minimal",
     relative = "editor",
@@ -1653,7 +1967,6 @@ local function show_ascii_art()
     border = "rounded",
   }
 
-  -- Abrir la ventana flotante
   local win = vim.api.nvim_open_win(buf, true, opts)
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, ascii_art_1)
   vim.api.nvim_buf_set_option(buf, "modifiable", false)
@@ -1695,11 +2008,9 @@ local function show_ascii_art()
     vim.api.nvim_buf_set_lines(buf, 0, -1, false, ascii_art_7)
     vim.api.nvim_buf_set_option(buf, "modifiable", false)
   end, 2800) -- 2000 ms = 2 segundos
-  -- Cerrar la ventana automáticamente después de otros 1 segundo (total de 3 segundos)
   vim.defer_fn(function()
-    vim.api.nvim_win_close(win, true) -- Cerrar la ventana utilizando su identificador
+    vim.api.nvim_win_close(win, true)
   end, 3500) -- 3000 ms = 3 segundos
-  -- Cerrar la ventana automáticamente después de otros 1 segundo (total de 3 segundos)
 end
 _G.show_little_bird = show_ascii_art
 
@@ -1888,9 +2199,6 @@ return M
 
 ==> Archivo: lua/config/keymaps.lua <==
 
--- Keymaps are automatically loaded on the VeryLazy event
--- Default keymaps that are always set: https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua
--- Add any additional keymaps here
 local map = vim.keymap.set
 -- En modo visual, cuando presionas `p`, reemplaza sin copiar al registro
 map("v", "p", '"_dP', { noremap = true, silent = true })
@@ -1898,9 +2206,6 @@ map("v", "p", '"_dP', { noremap = true, silent = true })
 -- En modo visual, cuando presionas `x`, elimina sin copiar al registro
 map("v", "x", '"_x', { noremap = true, silent = true })
 map("n", "x", '"_x', { noremap = true, silent = true })
--- Lo mismo para la tecla Suprimir (Delete) en modo visual
-map("v", "<C-Del>", '"_x', { noremap = true, silent = true })
-map("n", "<C-Del>", '"_x', { noremap = true, silent = true })
 
 -- En modo normal, cuando presionas `ss`, elimina la línea sin copiarla
 map("n", "ss", '"_dd', { noremap = true, silent = true })
@@ -1956,7 +2261,7 @@ map("n", "<Leader>t", function()
   vim.cmd("Trouble diagnostics")
   vim.defer_fn(function()
     vim.cmd("wincmd j")
-  end, 50) -- Delay of 50 milliseconds
+  end, 100) -- Delay of 50 milliseconds
 end, { noremap = true, silent = true, desc = "Show Trouble diagnostics and move to the window" })
 
 -- Mapeo para seleccionar la palabra bajo el cursor y entrar en modo visual
@@ -1987,43 +2292,25 @@ map("n", "<C-Down>", "<NOP>", { noremap = true, silent = true })
 map("v", "<C-Up>", "<NOP>", { noremap = true, silent = true })
 map("v", "<C-Down>", "<NOP>", { noremap = true, silent = true })
 
----- Función para abrir terminal en la ubicación del archivo actual
-
 -- Función para abrir terminal en la ubicación del archivo actual
 local function open_terminal_in_file_dir()
-  -- Obtener la ruta absoluta del archivo actual
   local file_path = vim.fn.expand("%:p")
-
-  -- Si no hay archivo abierto, usar el directorio actual
   if file_path == "" then
     vim.notify("No hay archivo abierto, usando directorio actual", vim.log.levels.WARN)
     return
   end
-
-  -- Obtener el directorio del archivo
   local file_dir = vim.fn.fnamemodify(file_path, ":h")
-
-  -- Abrir nueva pestaña con terminal
   vim.cmd("tabnew")
-
-  -- Cambiar al directorio del archivo
   vim.cmd("lcd " .. vim.fn.fnameescape(file_dir))
-
-  -- Abrir terminal
   vim.cmd("terminal")
-
-  -- Mostrar mensaje con la ruta actual
   vim.notify("Terminal abierta en: " .. file_dir, vim.log.levels.INFO)
 end
 
--- Mapear <leader>tt para abrir terminal en la ubicación del archivo
 vim.keymap.set("n", "<leader>bu", open_terminal_in_file_dir, {
   noremap = true,
   silent = true,
   desc = "Open terminal in current file's directory",
 })
-
--- local map = vim.keymap.set
 
 map("n", "<leader>rp", require("config.transparent").toggle_transparency, {
   desc = "transparent",
@@ -2038,7 +2325,6 @@ vim.keymap.set("n", "<leader>ri", _G.gather_file_contents_smart, {
 })
 
 -- NUEVOS MAPEOS PARA COLORES DE CARPETAS
--- Mapeo para cambiar colores de carpetas
 vim.keymap.set("n", "<leader>rl", function()
   require("config.folder-colors").cycle_folder_colors()
 end, {
@@ -2063,12 +2349,6 @@ map("n", "<leader>ry", _G.show_little_bird, {
   desc = "Show little bird animation",
 })
 
--- Agregar estas líneas al final de tu lua/config/keymaps.lua
-
--- =============================================================================
--- TERMINAL FLOTANTE PERSONALIZADA
--- =============================================================================
-
 -- Mapeo principal para abrir/cerrar terminal
 map("n", "<leader>rt", function()
   require("config.terminal").toggle_terminal()
@@ -2079,53 +2359,79 @@ map("n", "<F11>", function()
   require("config.terminal").toggle_terminal()
 end, { noremap = true, silent = true, desc = "Toggle Terminal" })
 
+-- Función helper mejorada para revelar archivo actual en Neo-tree
+local function smart_neotree_toggle(source)
+  local current_file = vim.fn.expand("%:p")
+  local manager = require("neo-tree.sources.manager")
+  local state = manager.get_state(source)
+  if state and state.winid and vim.api.nvim_win_is_valid(state.winid) then
+    vim.cmd("Neotree close")
+  else
+    if current_file == "" then
+      vim.cmd("Neotree show " .. source)
+    else
+      vim.cmd("Neotree show " .. source .. " reveal")
+    end
+
+    vim.defer_fn(function()
+      vim.cmd("Neotree focus " .. source)
+    end, 200)
+  end
+end
+
+-- <leader>1: Abrir/cerrar Neo-tree en Files (con cursor automático)
+map("n", "<leader>1", function()
+  smart_neotree_toggle("filesystem")
+end, { desc = "Toggle Neo-tree Files (auto focus)" })
+
+-- <leader>2: Abrir/cerrar Neo-tree en Buffers (con cursor automático)
+map("n", "<leader>2", function()
+  smart_neotree_toggle("buffers")
+end, { desc = "Toggle Neo-tree Buffers (auto focus)" })
+
+-- <leader>3: Abrir/cerrar Neo-tree en Git (con cursor automático)
+map("n", "<leader>3", function()
+  smart_neotree_toggle("git_status")
+end, { desc = "Toggle Neo-tree Git (auto focus)" })
+
 ==> Fin de lua/config/keymaps.lua <==
 
 ----------------------------------------
 
 ==> Archivo: lua/config/terminal.lua <==
 
--- lua/config/terminal.lua
 local M = {}
 
--- Variable para trackear la ventana del terminal
 local terminal_win = nil
 local terminal_buf = nil
 
 function M.toggle_terminal()
-  -- Si la ventana existe y está abierta, cerrarla
   if terminal_win and vim.api.nvim_win_is_valid(terminal_win) then
     vim.api.nvim_win_close(terminal_win, false)
     terminal_win = nil
     return
   end
 
-  -- Calcular dimensiones (85% ancho, 75% alto para más espacio)
   local width = math.floor(vim.o.columns * 0.85)
   local height = math.floor(vim.o.lines * 0.75)
   local row = math.floor((vim.o.lines - height) / 2)
   local col = math.floor((vim.o.columns - width) / 2)
 
-  -- Crear buffer si no existe o si fue eliminado
   if not terminal_buf or not vim.api.nvim_buf_is_valid(terminal_buf) then
     terminal_buf = vim.api.nvim_create_buf(false, true)
 
-    -- Configurar el buffer del terminal
     vim.api.nvim_buf_set_option(terminal_buf, "bufhidden", "hide")
     vim.api.nvim_buf_set_option(terminal_buf, "buflisted", false)
   end
 
-  -- Obtener información del sistema para el header
   local username = vim.fn.expand("$USER") or "user"
   local hostname = vim.fn.hostname() or "localhost"
   local cwd = vim.fn.fnamemodify(vim.fn.getcwd(), ":t")
   local time = os.date("%H:%M")
   local date = os.date("%d/%m/%Y")
 
-  -- Crear título dinámico súper estilizado
   local title = string.format(" 🚀 %s@%s | %s | %s ", username, hostname, cwd, time)
 
-  -- Crear ventana flotante súper bonita
   terminal_win = vim.api.nvim_open_win(terminal_buf, true, {
     relative = "editor",
     width = width,
@@ -2140,38 +2446,29 @@ function M.toggle_terminal()
     footer_pos = "center",
   })
 
-  -- Aplicar highlights súper estilizados
   M.setup_terminal_highlights()
 
-  -- Variable para trackear si es un terminal nuevo
   local is_new_terminal = false
 
-  -- Si es un buffer nuevo o vacío, iniciar terminal
   if
     vim.api.nvim_buf_line_count(terminal_buf) <= 1
     and vim.api.nvim_buf_get_lines(terminal_buf, 0, -1, false)[1] == ""
   then
     is_new_terminal = true
 
-    -- ALTERNATIVA: Ejecutar neofetch directamente en el inicio del shell
     local shell_cmd = vim.o.shell
     if vim.o.shell:match("fish") then
-      -- Para fish shell
       shell_cmd = { vim.o.shell, "-c", "neofetch; exec " .. vim.o.shell }
     elseif vim.o.shell:match("zsh") then
-      -- Para zsh
       shell_cmd = { vim.o.shell, "-c", "neofetch; exec zsh" }
     elseif vim.o.shell:match("bash") then
-      -- Para bash
       shell_cmd = { vim.o.shell, "-c", "neofetch; exec bash" }
     else
-      -- Fallback genérico
       shell_cmd = { vim.o.shell, "-c", "neofetch 2>/dev/null || echo 'neofetch no encontrado'; exec " .. vim.o.shell }
     end
 
     vim.fn.termopen(shell_cmd, {
       on_exit = function()
-        -- Cuando el terminal se cierra, limpiar variables
         if terminal_win and vim.api.nvim_win_is_valid(terminal_win) then
           vim.api.nvim_win_close(terminal_win, false)
         end
@@ -2181,10 +2478,8 @@ function M.toggle_terminal()
     })
   end
 
-  -- Configurar mapeos específicos para este terminal
   M.setup_terminal_keymaps()
 
-  -- Entrar en modo terminal automáticamente
   vim.cmd("startinsert")
 end
 
@@ -2193,7 +2488,6 @@ function M.setup_terminal_keymaps()
     return
   end
 
-  -- Mapeos para cuando estás en modo terminal (escribiendo)
   vim.keymap.set("t", "<Esc><Esc>", function()
     if terminal_win and vim.api.nvim_win_is_valid(terminal_win) then
       vim.api.nvim_win_close(terminal_win, false)
@@ -2590,28 +2884,26 @@ require("lualine").setup({
   sections = {
     lualine_a = { "mode" },
     lualine_b = {
-      "branch", -- Muestra la rama de git
-      "diff", -- Muestra los cambios (git diff)
-      "diagnostics", -- Muestra los diagnósticos (LSP)
+      "branch",
+      "diff",
+      "diagnostics",
     },
     lualine_c = { "filename" },
     lualine_x = {
-      "encoding", -- Muestra la codificación del archivo (por ejemplo, UTF-8)
-      "fileformat", -- Muestra el formato del archivo (por ejemplo, Unix)
-      "filetype", -- Muestra el tipo de archivo (con ícono)
+      "encoding",
+      "fileformat",
+      "filetype",
       {
-        -- Mostrar el porcentaje de progreso en el archivo
         function()
           local current_line = vim.fn.line(".")
           local total_lines = vim.fn.line("$")
           local percent = math.floor((current_line / total_lines) * 100)
-          return string.format("%3d", percent) .. "%%" -- Asegurar un ancho fijo para el porcentaje
+          return string.format("%3d", percent) .. "%%"
         end,
-        color = { fg = "#ffffff", gui = "bold" }, -- Personaliza el color del porcentaje
-        padding = { left = 2, right = 2 }, -- Espacio antes y después del porcentaje
+        color = { fg = "#ffffff", gui = "bold" },
+        padding = { left = 2, right = 2 },
       },
       {
-        -- Mostrar el nombre de la última carpeta con lógica condicional y fondo personalizado
         function()
           local cwd = vim.fn.fnamemodify(vim.fn.getcwd(), ":t")
           if cwd == "zEMVThreeServiceContextV4" then
@@ -2625,24 +2917,23 @@ require("lualine").setup({
         color = function()
           local cwd = vim.fn.fnamemodify(vim.fn.getcwd(), ":t")
           if cwd == "zEMVThreeServiceContextV4" then
-            return { fg = "#33c3ff", bg = "#3f3f3f", gui = "bold" } -- Color para "Front" con fondo gris oscuro
+            return { fg = "#33c3ff", bg = "#3f3f3f", gui = "bold" }
           elseif cwd == "zEMVThreeClientStandaloneV6" then
-            return { fg = "#ff5733", bg = "#3f3f3f", gui = "bold" } -- Color para "Back" con fondo gris oscuro
+            return { fg = "#ff5733", bg = "#3f3f3f", gui = "bold" }
           else
-            return { fg = "#ffffff", bg = "#3f3f3f", gui = "bold" } -- Color por defecto con fondo gris medio
+            return { fg = "#ffffff", bg = "#3f3f3f", gui = "bold" }
           end
         end,
-        padding = { left = 2, right = 2 }, -- Espacio antes del nombre de la carpeta
+        padding = { left = 2, right = 2 },
       },
     },
     lualine_y = {},
     lualine_z = {
       {
-        -- Mostrar la hora actual en la esquina derecha
         'os.date("%H:%M")',
-        color = { fg = "#ffffff", bg = "#000000" }, -- Fondo negro para la hora
+        color = { fg = "#ffffff", bg = "#000000" },
         icon = "🕒",
-        padding = { left = 2, right = 2 }, -- Espacio alrededor de la hora
+        padding = { left = 2, right = 2 },
       },
     },
   },
