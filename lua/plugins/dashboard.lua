@@ -13,7 +13,7 @@ return {
     opts = {
       -- Solo el dashboard
       bigfile = { enabled = false },
-      notifier = { enabled = false },
+      -- notifier = { enabled = false },
       quickfile = { enabled = false },
       statuscolumn = { enabled = false },
       words = { enabled = false },
