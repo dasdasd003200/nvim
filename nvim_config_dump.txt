@@ -1,5 +1,5 @@
 === Configuración de Neovim en NixOS ===
-Fecha: vie 11 jul 2025 19:08:30 -04
+Fecha: mié 16 jul 2025 21:11:06 -04
 Ruta: /home/dasdasd/.config/nvim
 ===============================
 
@@ -98,6 +98,69 @@ return {
 }
 
 ==> Fin de lua/plugins/transparent.lua <==
+
+----------------------------------------
+
+==> Archivo: lua/plugins/notify.lua <==
+
+-- lua/plugins/nvim-notify.lua
+return {
+  "rcarriga/nvim-notify",
+  event = "VeryLazy",
+  config = function()
+    local notify = require("notify")
+
+    notify.setup({
+      -- ESTILOS DE PRESENTACIÓN (descomenta solo uno)
+      -- render = "minimal", -- Muy discreto, solo texto
+      -- render = "simple", -- Minimalista básico
+      -- render = "compact", -- Compacto con icono
+      render = "wrapped-compact", -- Compacto con texto ajustado
+      -- render = "default", -- Completo con todos los elementos
+
+      -- ANIMACIONES (descomenta solo una)
+      stages = "slide", -- Deslizamiento suave
+      -- stages = "fade",         -- Desvanecimiento
+      -- stages = "fade_in_slide_out", -- Aparece desvaneciéndose, sale deslizándose
+      -- stages = "static",       -- Sin animación
+
+      -- TRANSPARENCIA (descomenta solo una)
+      -- background_colour = "Normal", -- Transparente (usa fondo del editor)
+      background_colour = "#1e1e2e", -- Fondo oscuro sólido
+      -- background_colour = "#000000", -- Fondo negro sólido
+      -- background_colour = "NONE", -- SÚPER TRANSPARENTE (completamente invisible)
+
+      -- POSICIÓN (descomenta solo una)
+      top_down = true, -- Notificaciones de arriba hacia abajo
+      -- top_down = false,        -- Notificaciones de abajo hacia arriba
+
+      -- CONFIGURACIÓN BÁSICA
+      timeout = 3000, -- Duración: 3 segundos
+      minimum_width = 50, -- Ancho mínimo
+      level = 2, -- Mostrar desde INFO hacia arriba (oculta DEBUG)
+
+      -- Hacer ventana no enfocable
+      on_open = function(win)
+        vim.api.nvim_win_set_config(win, { focusable = false })
+      end,
+    })
+
+    -- Usar notify como manejador por defecto
+    vim.notify = notify
+
+    -- PERSONALIZACIÓN DE COLORES (descomenta para activar)
+    vim.schedule(function()
+      -- PERSONALIZACIÓN TOTAL (descomenta para usar colores personalizados)
+      -- vim.api.nvim_set_hl(0, "NotifyINFOTitle", { fg = "#ff79c6" }) -- Rosa magenta para títulos de info
+      -- vim.api.nvim_set_hl(0, "NotifyINFOBody", { fg = "#bd93f9" }) -- Púrpura para texto de info
+      -- vim.api.nvim_set_hl(0, "NotifyINFOIcon", { fg = "#ff79c6" }) -- Rosa magenta para íconos de info
+      -- vim.api.nvim_set_hl(0, "NotifyINFOBorder", { fg = "#ff79c6" }) -- Rosa magenta para bordes de info
+      -- vim.api.nvim_set_hl(0, "NotifyINFOBackground", { bg = "#ff79c6" }) -- Fondo ROSA MAGENTA para todas
+    end)
+  end,
+}
+
+==> Fin de lua/plugins/notify.lua <==
 
 ----------------------------------------
 
@@ -1268,7 +1331,6 @@ return {
     "echasnovski/mini.starter",
     enabled = false,
   },
-
   {
     "folke/snacks.nvim",
     priority = 1000,
@@ -1276,41 +1338,47 @@ return {
     opts = {
       -- Solo el dashboard
       bigfile = { enabled = false },
-      -- notifier = { enabled = false },
       quickfile = { enabled = false },
       statuscolumn = { enabled = false },
       words = { enabled = false },
-
       dashboard = {
         enabled = true,
         sections = {
           { section = "header" },
           { icon = " ", title = "Keymaps", section = "keys", indent = 2, padding = 1 },
-          { icon = " ", title = "Recent Files", section = "recent_files", indent = 2, padding = 1 },
+          -- { icon = " ", title = "Recent Files", section = "recent_files", indent = 2, padding = 1 },
           { icon = " ", title = "Projects", section = "projects", indent = 2, padding = 1 },
+
           { section = "startup" },
         },
         preset = {
           header = [[
-     █████                       █████                       █████
-    ░░███                       ░░███                       ░░███ 
-  ███████   ██████    █████   ███████   ██████    █████   ███████ 
- ███░░███  ░░░░░███  ███░░   ███░░███  ░░░░░███  ███░░   ███░░███ 
-░███ ░███   ███████ ░░█████ ░███ ░███   ███████ ░░█████ ░███ ░███ 
-░███ ░███  ███░░███  ░░░░███░███ ░███  ███░░███  ░░░░███░███ ░███ 
-░░████████░░████████ ██████ ░░████████░░████████ ██████ ░░████████
- ░░░░░░░░  ░░░░░░░░ ░░░░░░   ░░░░░░░░  ░░░░░░░░ ░░░░░░   ░░░░░░░░ 
+ | |             | |             | |  ⠀⠀⠀⠀⣀⡀
+   __| | __ _ ___  __| | __ _ ___  __| |  ⢠⣤⡀⣾⣿⣿⠀⣤⣤⡄
+  / _` |/ _` / __|/ _` |/ _` / __|/ _` |  ⢿⣿⡇⠘⠛⠁⢸⣿⣿⠃
+  | (_| | (_| \__ \ (_| | (_| \__ \ (_| |  ⠈⣉⣤⣾⣿⣿⡆⠉⣴⣶⣶
+   \__,_|\__,_|___/\__,_|\__,_|___/\__,_|  ⣾⣿⣿⣿⣿⣿⣿⡀⠻⠟⠃
+                                         ⠙⠛⠻⢿⣿⣿⣿⡇
+                    ⠀⠀⠀ ⠈⣿⣿⣦                 ⠙⠋
+                      ⠀⠀⠀⣀⡘⣿⣿⣷⡰⣶⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣠⣤⣶⠟⠁
+                   ⠀⠀⢻⣿⣿⣌⢿⣿⣷⣭⣤⣤⣤⣤⣄⣀⠀⠀⠀⣠⣶⣿⣿⡿⠃
+                 ⠀⠀⢸⣿⣿⣿⢎⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⣶⣿⣿⣿⠟⠉
+              ⠀⠀⣸⠛⠉⢀⣿⣿⠋⣭⢿⣿⣿⣿⡿⠻⣿⣿⡿⠋
+             ⢰⣿⣿⣶⡆⠻⠿⣿⣦⣤⣾⡿⣿⣧⠛⢀⣿⣿⡇
+                 ⠀⠻⣿⣿⣿⠀⢀⣿⣿⣿⠟⠛⢿⣿⣿⣿⣿⣿⡇⣠⣤⣤⣤
+                 ⠀⠀⠈⠻⣿⣦⡻⣿⣿⣿⡇⠀⣰⣿⣿⣿⡏⠀⢀⣿⣿⣿⠟
+                ⠀⠀⠀⠀⣿⣿⣿⣮⣛⠿⠷⣾⣿⣿⡿⠿⣣⣴⡿⠟⠋⠀
+            ⠀⠀⠀⠀⣿⣿⣿⣿⣿⣿⣷⣶⣶⣶⣶⣿⣿⡟
+           ⠀⠀⠀⢼⡿⠙⠿⣿⣿⣿⣿⣿⣿⣿⣿⡿⠏
+           ⠀⠀⠀⠀⠀⠀⠀⠀⠉⠙⠛⠛⠛⠋⠉⠺⠷
           ]],
-          -- ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
-          -- █                             📁                                   █
-          -- ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
           keys = {
             { icon = "📁", key = "f", desc = "Find File", action = ":lua Snacks.dashboard.pick('files')" },
-            { icon = "📄", key = "n", desc = "New File", action = ":ene | startinsert" },
+            -- { icon = "📄", key = "n", desc = "New File", action = ":ene | startinsert" },
             { icon = "🔍", key = "g", desc = "Find Text", action = ":lua Snacks.dashboard.pick('live_grep')" },
             { icon = "📝", key = "r", desc = "Recent Files", action = ":lua Snacks.dashboard.pick('oldfiles')" },
             { icon = "💾", key = "s", desc = "Restore Session", section = "session" },
-            { icon = "⚙️", key = "l", desc = "Lazy", action = ":Lazy" },
+            -- { icon = "⚙️", key = "l", desc = "Lazy", action = ":Lazy" },
             { icon = "❌", key = "q", desc = "Quit", action = ":qa" },
           },
         },

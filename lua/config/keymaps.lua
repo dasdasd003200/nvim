@@ -148,6 +148,20 @@ map("n", "<leader>ry", _G.show_little_bird, {
   desc = "Show little bird animation",
 })
 
+-- Comment Remover - Eliminar todos los comentarios con <leader>rc
+map("n", "<leader>rc", function()
+  local ok, comment_remover = pcall(require, "config.comment-remover")
+  if not ok then
+    vim.notify("❌ Error: No se pudo cargar comment-remover", vim.log.levels.ERROR)
+    return
+  end
+  comment_remover.remove_comments_with_confirmation()
+end, {
+  noremap = true,
+  silent = true,
+  desc = "Elimrnar todos los comentarios del archivo",
+})
+
 -- Mapeo principal para abrir/cerrar terminal
 map("n", "<leader>rt", function()
   require("config.terminal").toggle_terminal()
